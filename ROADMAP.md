@@ -107,6 +107,15 @@ not been exercised, so lifetime correctness is unproven.
 **Goal:** recognize a valid, supported EXT4 volume and reject everything else,
 without mounting it.
 
+Status: the engine skeleton, little-endian decoders, overflow-checked helpers,
+block-I/O callback boundary, bounded superblock read, superblock validation,
+and the feature policy are authored under `driver/ext4`, with host tests in
+`driver/ext4/tests` and a `Engine host tests` CI job to build and run them.
+**None of it has been compiled yet** — that job performs the first build, and
+the authoring workspace has no C compiler. `metadata_csum` volumes are refused
+with `StgrStatusChecksumNotVerified` until the CRC-32C path is validated
+against images from a pinned `e2fsprogs`; refusing is the safe direction.
+
 Deliverables:
 
 - [ ] Freestanding engine skeleton under `driver/ext4/` with no kernel headers.

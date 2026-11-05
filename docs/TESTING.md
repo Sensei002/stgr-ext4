@@ -1,13 +1,13 @@
 # Testing strategy
 
-Status: **no filesystem test has been executed.** Static checks that have run in
-this workspace are limited to `scripts/Test-Repository.ps1` (all required-file,
-SPDX, dependency, secret, and version checks passed) and the Rust workspace's
-`cargo fmt --all -- --check` and
-`cargo clippy --workspace --all-targets -- -D warnings` (clean on Rust 1.83.0).
-The Rust unit and process tests were **not** executed: no linker is installed,
-so no test binary could be produced. There is no driver build, no VM, and no
-EXT4 image corpus.
+Status: **no filesystem test has been executed against a volume.** Compile and
+static layers run in CI: run 7 was green for hygiene, the Rust CLI
+(format, Clippy, tests, link), and Debug/Release x64 driver builds with catalog
+generation and the PE check. The engine's host unit tests are authored under
+`driver/ext4/tests` and run through `scripts/Test-Engine.ps1`, but they have
+**not been executed yet** — the engine CI job first runs on the next push, and
+no compiler exists in the authoring workspace. The driver has never been
+loaded, no VM exists, and there is no EXT4 image corpus.
 
 This document defines the test ladder, the evidence required at each level, and
 the boundary between what CI can prove and what only a lab can prove.
@@ -106,9 +106,15 @@ The CLI has no external crates. Clippy warnings are errors.
 
 ---
 
-## 5. L2 — Engine unit tests (future)
+## 5. L2 — Engine unit tests (host)
 
-The portable engine (`driver/ext4`) is compiled into a host binary with:
+The portable engine (`driver/ext4`) is freestanding C. `scripts/Test-Engine.ps1`
+locates MSVC through `vswhere`, compiles the engine plus `driver/ext4/tests` at
+`/W4 /WX` as an ordinary host executable, and runs it. CI calls the same script
+from the `Engine host tests` job, so a parser change is proven without a driver,
+a partition, or a VM.
+
+The test harness is built around:
 
 - an in-memory block device;
 - a file-backed block device;
@@ -384,12 +390,12 @@ substitute for a hash comparison and `e2fsck -fn`.
 
 | Test | Status |
 | --- | --- |
-| Hygiene script | Never run |
-| Driver compile | Never run |
-| Code analysis | Never run |
-| PE check | Never run |
-| CLI fmt/clippy/test | Never run |
-| Engine unit tests | Do not exist |
+| Hygiene script | Passes locally and in CI run 7 |
+| Driver compile | Green in CI run 7 (Debug and Release x64) |
+| Code analysis | Never run (`/analyze` is not enabled yet) |
+| PE check | Green in CI run 7 |
+| CLI fmt/clippy/test | Green in CI run 7 |
+| Engine unit tests | Authored; first run is the next CI push |
 | Corrupt corpus | Does not exist |
 | Fuzzing | Never run |
 | Driver load/unload | Never run |

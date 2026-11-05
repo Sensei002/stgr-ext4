@@ -49,6 +49,7 @@ versions are in §2.
 ```text
 ci.yml
   ├── hygiene (Test-Repository.ps1)
+  ├── engine (Test-Engine.ps1: host build of driver/ext4 plus unit tests)
   ├── driver  -> driver-build.yml (matrix: Debug, Release)
   └── management -> management-build.yml
 
@@ -133,11 +134,14 @@ consume a runner.
 
 1. **hygiene** — `windows-2025`, runs
    `.\scripts\Test-Repository.ps1`.
-2. **driver** — calls `driver-build.yml` after hygiene passes; its build job
+2. **engine** — `windows-2022`, runs `.\scripts\Test-Engine.ps1`. Compiles the
+   freestanding engine and its host tests with MSVC at `/W4 /WX` and runs them.
+   No WDK, no driver install, no VM.
+3. **driver** — calls `driver-build.yml` after hygiene passes; its build job
    runs on `windows-2022` so the pinned 26100 WDK task assemblies load.
-3. **management** — calls `management-build.yml` after hygiene passes.
+4. **management** — calls `management-build.yml` after hygiene passes.
 
-The driver and management jobs run in parallel once hygiene is green.
+The engine, driver, and management jobs run in parallel once hygiene is green.
 
 ### What it proves
 
@@ -149,7 +153,10 @@ The driver and management jobs run in parallel once hygiene is green.
 - the driver compiles for Debug and Release x64 (if the job succeeds);
 - the INF produces a catalog;
 - the PE image is x64 native;
-- the Rust CLI formats, lints, tests, and builds.
+- the Rust CLI formats, lints, tests, and builds;
+- the engine parses and validates a superblock on the host, and refuses bad
+  magic, bad geometry, bad sizes, unclean volumes, and refused features with
+  the exact status each test asserts.
 
 ### What it does not prove
 

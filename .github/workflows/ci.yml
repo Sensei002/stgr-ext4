@@ -25,6 +25,21 @@ jobs:
         shell: pwsh
         run: .\scripts\Test-Repository.ps1
 
+  engine:
+    name: Engine host tests
+    needs: hygiene
+    # Host-only build of the freestanding engine: no WDK, no driver load, no
+    # VM. It compiles driver/ext4 at /W4 /WX and runs the unit tests, which is
+    # the layer that catches parser bugs.
+    runs-on: windows-2022
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compile and run engine host tests
+        shell: pwsh
+        run: .\scripts\Test-Engine.ps1 -Configuration Release
+
   driver:
     name: Driver
     needs: hygiene
