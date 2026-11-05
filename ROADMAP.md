@@ -6,14 +6,17 @@ has never been compiled does not satisfy a milestone.
 
 Status legend: **done**, **in progress**, **not started**, **blocked**.
 
-Current position: **Milestone 0 closed, Milestone 1 source built in CI, the
-Milestone 2 parser green on the host.** GitHub Actions CI run 8 (`55a1236`,
-2026-11-05) completed green: hygiene, Debug and Release x64 driver builds with
-INF catalog and native PE verification, the Rust CLI, and the new `Engine host
-tests` job (71 checks, 0 failures). Run 7 (`164c359`) was the first green
-driver run and `Security` passed on both commits. Runs 1–6 failed while the
-build was brought up and are superseded. The toolset versions the Milestone 0
-gate asks for are transcribed in
+Current position: **Milestone 0 closed, Milestone 1 source built in CI, Milestone 2
+parser green on the host and proven against a real mke2fs corpus.** GitHub
+Actions CI run 10 (`3824cb1`, 2026-11-05) completed green across all six jobs:
+hygiene, the `EXT4 image corpus` job, `Engine host tests`, the Rust CLI, and
+Debug and Release x64 driver builds with INF catalog and native PE verification.
+Run 7 (`164c359`) was the first green driver run and `Security` passed on every
+green commit since. Runs 1–6 failed while the build was brought up and are
+superseded. The corpus job generates nine `mke2fs` images on Linux, publishes a
+SHA-256 manifest and an `e2fsck -fn` baseline, and the engine job verifies every
+hash before parsing (9 images parsed, 4 accepted, 5 refused for the documented
+reasons). The toolset versions the Milestone 0 gate asks for are transcribed in
 [`docs/GITHUB-ACTIONS.md`](docs/GITHUB-ACTIONS.md) §2. No driver has been
 loaded in a VM and no volume has been mounted.
 
@@ -25,7 +28,7 @@ loaded in a VM and no volume has been mounted.
 | --- | --- | --- | --- |
 | 0 | Research, architecture, CI foundation | 0.5–1 month | **Done** (CI green on run 8; toolset versions recorded) |
 | 1 | Driver skeleton, registration, dispatch, package | 1–2 months | **In progress** (built and packaged in CI; never loaded or VM-tested) |
-| 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | **In progress** (parser and host tests green; corpus and kernel build pending) |
+| 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | **In progress** (parser, host tests, and nine-image mke2fs corpus green in CI run 10; kernel build of the engine still pending) |
 | 3 | Read-only mount: VDO/VPB, Mount Manager, drive letter | 2–4 months | Not started |
 | 4 | Full read path: inodes, directories, extents, xattrs, cache | 3–6 months | Not started |
 | 5 | Journal parsing and recovery | 4–8 months | Not started |
@@ -136,7 +139,8 @@ Deliverables:
       [`docs/FILESYSTEM-COMPATIBILITY.md`](docs/FILESYSTEM-COMPATIBILITY.md).
 - [ ] Approved-volume allowlist lookup (design in
       [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md)).
-- [ ] Host-side unit tests and a corrupt-image corpus.
+- [x] Host-side unit tests (`driver/ext4/tests`), green in CI run 10: 71 checks, 0 failures.
+- [x] Corrupt-image and feature-refusal corpus of nine `mke2fs` images generated on Linux in CI run 10, with a SHA-256 manifest and an `e2fsck -fn` baseline; the engine job verifies every hash before parsing (9 images parsed, 4 accepted, 5 refused for the documented reasons).
 - [ ] Mount probe returns success **only** for an approved, supported volume
       (still without creating a VDO until Milestone 3).
 
@@ -145,9 +149,17 @@ unsupported feature combination and every corrupted image in the corpus, and
 the kernel build passes `/W4 /WX` plus `/analyze` with a clean baseline.
 Mount success must still not be reported until the VDO/VPB work lands.
 
-**Not met yet:** the passing host tests use synthetic images built in memory,
-so no image from a real `mke2fs` has been parsed, and there is no corpus of
-rejected combinations or corrupted images.
+**Not yet met:** the kernel build of the engine under WDK `Host.KMDF` is still
+missing, so `/W4 /WX` plus `/analyze` has not been run on the kernel target, and
+no VM load/unload or mount probe has been exercised. The host-side corpus is
+complete as of run 10: nine `mke2fs` images, a verified SHA-256 manifest, and an
+`e2fsck -fn` baseline, with 4 images accepted and 5 refused for the documented
+reasons. The one honest open detail in the corpus is bigalloc: the engine
+refuses the real `mke2fs` bigalloc image as `BadGeometry` (it writes
+`blocks_per_group = 524288`, over the engine's `blockSize*8` group bitmap
+limit, and has no extents/filetype), which is the correct refusal until a
+cluster-aware reader ships; the corpus pins that refusal rather than faking an
+acceptance.
 
 ---
 
