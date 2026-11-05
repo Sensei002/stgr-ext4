@@ -30,6 +30,24 @@
     Project="$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.props"
     Condition="Exists('$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.props')" />
 
+  <!--
+    The WDK content package lays its tools out as c\bin\<version>\<arch>.
+    The WDK targets normally derive that path from the installed kit, and
+    fall back to an unversioned c\bin path when the kit properties are not
+    populated. That fallback cannot find tools such as stampinf.exe, because
+    the content package stores them under the version directory. Set the
+    paths explicitly so a NuGet-only build is deterministic.
+  -->
+  <PropertyGroup>
+    <StgrWdkContentRoot>$(StgrPackagesDir)Microsoft.Windows.WDK.x64.10.0.26100.6584\c</StgrWdkContentRoot>
+    <StgrWdkBinRoot>$(StgrWdkContentRoot)\bin\10.0.26100.0</StgrWdkBinRoot>
+    <WDKContentRoot>$(StgrWdkContentRoot)</WDKContentRoot>
+    <WDKBinRoot>$(StgrWdkBinRoot)</WDKBinRoot>
+    <WindowsSDKVersionedBinRoot>$(StgrWdkBinRoot)</WindowsSDKVersionedBinRoot>
+    <InfToolPath>$(StgrWdkBinRoot)\x64\</InfToolPath>
+    <InfToolExe>stampinf.exe</InfToolExe>
+  </PropertyGroup>
+
   <Target Name="StgrCheckWdkPackages" BeforeTargets="PrepareForBuild">
     <Error
       Condition="'$(Platform)' == 'x64' and !Exists('$(StgrPackagesDir)Microsoft.Windows.WDK.x64.10.0.26100.6584\build\native\Microsoft.Windows.WDK.x64.props')"

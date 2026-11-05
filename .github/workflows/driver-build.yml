@@ -42,6 +42,25 @@ jobs:
           & msbuild -version -nologo
           & nuget help | Select-Object -First 1
 
+      - name: Record resolved WDK tool paths
+        shell: pwsh
+        run: |
+          $names = @(
+            'TargetPlatformVersion',
+            'WDKContentRoot',
+            'WDKBinRoot',
+            'WindowsSDKVersionedBinRoot',
+            'InfToolPath',
+            'InfToolExe'
+          )
+          foreach ($name in $names) {
+            $value = & msbuild .\driver\STGRExt4.vcxproj -nologo `
+              "/p:Configuration=${{ matrix.configuration }}" `
+              "/p:Platform=x64" `
+              "-getProperty:$name"
+            Write-Host ("{0} = {1}" -f $name, $value)
+          }
+
       - name: Build driver
         shell: pwsh
         run: .\scripts\Build-Driver.ps1 -Configuration ${{ matrix.configuration }} -Platform x64

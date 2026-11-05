@@ -46,6 +46,12 @@ jobs:
       contents: read
       checks: write
       issues: write
+    # The audit tool is a build-time-only developer tool, not part of the
+    # shipped binary, so it does not need the pinned 1.83.0 toolchain.
+    # cargo-audit 0.22.x requires rustc >= 1.88, and rustup gives
+    # RUSTUP_TOOLCHAIN precedence over rust-toolchain.toml.
+    env:
+      RUSTUP_TOOLCHAIN: stable
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
