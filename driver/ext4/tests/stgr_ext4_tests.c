@@ -74,6 +74,10 @@ static void ExpectInt(const char *Name, long Expected, long Actual)
     g_checks++;
     if (Expected != Actual)
     {
+        //
+        // %ld, not %d: the parameters are long, and MSVC reports a format
+        // mismatch as C4477, which /WX turns into a build failure.
+        //
         printf("FAIL %-46s expected %ld, got %ld\n", Name, Expected, Actual);
         g_failures++;
     }
@@ -245,6 +249,13 @@ static void TestOneKilobyteGeometry(void)
     PutLe32(superblock, SB_OFF_LOG_BLOCK_SIZE, 0u);
     PutLe32(superblock, SB_OFF_FIRST_DATA_BLOCK, 1u);
     PutLe16(superblock, SB_OFF_INODE_SIZE, 128u);
+
+    //
+    // A 1 KiB volume without 64BIT: descriptor size must come out at the
+    // legacy 32 bytes. Leaving 64BIT set here would correctly give 64.
+    //
+    PutLe32(superblock, SB_OFF_INCOMPAT,
+            STGR_FEATURE_INCOMPAT_EXTENTS | STGR_FEATURE_INCOMPAT_FILETYPE);
 
     ExpectStatus("1KiB volume accepted",
                  StgrStatusSuccess,
