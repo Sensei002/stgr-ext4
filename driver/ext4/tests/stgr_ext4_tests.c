@@ -643,6 +643,27 @@ static unsigned long ParseDecimal(const char *Text)
     return value;
 }
 
+//
+// MSVC flags fopen as C4996 at /W4, and this build treats warnings as errors
+// on purpose. fopen_s is the MSVC spelling; other toolchains keep fopen. The
+// warning is not disabled, because the point of /WX is that it stays honest.
+//
+static FILE *OpenFile(const char *Path, const char *Mode)
+{
+#ifdef _MSC_VER
+    FILE *file = NULL;
+
+    if (fopen_s(&file, Path, Mode) != 0)
+    {
+        return NULL;
+    }
+
+    return file;
+#else
+    return fopen(Path, Mode);
+#endif
+}
+
 static void TestCorpus(const char *Directory)
 {
     char path[1024];
@@ -652,7 +673,7 @@ static void TestCorpus(const char *Directory)
     int accepted = 0;
 
     (void)snprintf(path, sizeof(path), "%s/expectations.txt", Directory);
-    file = fopen(path, "r");
+    file = OpenFile(path, "r");
     if (file == NULL)
     {
         ExpectTrue("corpus expectations file opened", 0);
@@ -699,7 +720,7 @@ static void TestCorpus(const char *Directory)
         }
 
         (void)snprintf(path, sizeof(path), "%s/%s.img", Directory, name);
-        image = fopen(path, "rb");
+        image = OpenFile(path, "rb");
         if (image == NULL)
         {
             ExpectTrue("corpus image opened", 0);
