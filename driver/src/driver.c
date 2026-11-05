@@ -128,7 +128,7 @@ Return Value:
     // regardless of what the I/O manager does with the registration list.
     //
     IoRegisterFileSystem(fsdo);
-    if (ObReferenceObject(fsdo) == NULL)
+    if (!ObReferenceObjectSafe(fsdo))
     {
         IoUnregisterFileSystem(fsdo);
         status = STATUS_INSUFFICIENT_RESOURCES;

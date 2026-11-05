@@ -30,6 +30,11 @@ jobs:
 
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+        with:
+          # The WDK NuGet package ships the InfVerif native library for x64
+          # and ARM64 only. A 32-bit MSBuild asks for x86\InfVerif.dll and
+          # fails; a 64-bit MSBuild loads the x64 library.
+          msbuild-architecture: x64
 
       - name: Restore pinned WDK and SDK packages
         shell: pwsh
