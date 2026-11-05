@@ -76,6 +76,7 @@ New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 #
 $corpusPath = ''
 $corpusCount = 0
+$corpusArgument = ''
 if ($CorpusDir) {
     if (-not (Test-Path -LiteralPath $CorpusDir)) {
         throw "Corpus directory not found: $CorpusDir"
@@ -114,6 +115,8 @@ if ($CorpusDir) {
     if ($corpusCount -eq 0) {
         throw 'Corpus manifest listed no images.'
     }
+
+    $corpusArgument = ' --corpus "' + $corpusPath + '"'
 }
 
 $sources = @()
