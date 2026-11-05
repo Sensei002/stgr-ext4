@@ -106,8 +106,7 @@ therefore not made.
 
 - The driver compiles and packages in CI (runs 7 and 8) but has never been
   loaded or unloaded.
-- The EXT4 parser has only been run against synthetic images built in memory;
-  no image created by `mke2fs` has been parsed.
+- The EXT4 parser has been run against a nine-image corpus created by `mke2fs` on Linux and verified by SHA-256 in CI (run 10): four images accepted (1 KiB, 2 KiB, 4 KiB, 32-byte-descriptor), five refused for the documented reasons (metadata_csum checksum gate, bigalloc geometry, inline_data, encrypt, bad magic).
 - No EXT4 volume can be mounted.
 - No file can be read or written.
 - There is no volume device object, VPB, drive letter, cache integration, or

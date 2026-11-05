@@ -16,13 +16,14 @@ Contributors do not need MSVC, the WDK, or Rust locally.
 | Field | Value |
 | --- | --- |
 | Repository | `github.com/Sensei002/stgr-ext4`, branch `main` |
-| CI run | [#8 / 42019097667](https://github.com/Sensei002/stgr-ext4/actions/runs/42019097667), `push`, 2026-11-05T11:27Z, attempt 1 |
-| Commit | `55a1236` — "Engine tests: drop the unused decoded variable in the policy test" |
-| Jobs | `Repository hygiene`; `Engine host tests`; `Management / Rust 1.83.0`; `Driver / Debug x64`; `Driver / Release x64` — all `success` |
-| Engine job | `Compile and run engine host tests` passed: `71 checks, 0 failure(s)` |
-| Previous green run | [#7 / 41991783567](https://github.com/Sensei002/stgr-ext4/actions/runs/41991783567), `push`, 2026-11-05T08:05Z, commit `164c359` — first green driver run, four jobs (no engine job yet) |
+| CI run | [#10 / 42061325376](https://github.com/Sensei002/stgr-ext4/actions/runs/42061325376), `push`, 2026-11-05T16:07Z, attempt 1 |
+| Commit | `8dbbbf3` — "Corpus: pin bigalloc to its real refusal reason and stop asserting the engine accepts it" |
+| Jobs | `Repository hygiene`; `EXT4 image corpus`; `Engine host tests`; `Management / Rust 1.83.0`; `Driver / Debug x64`; `Driver / Release x64` — all `success` |
+| Engine job | `Compile and run engine host tests` passed: `71 checks, 0 failure(s)`; corpus: 9 images parsed, 4 accepted |
+| Corpus job | `EXT4 image corpus` passed on `ubuntu-latest`: nine `mke2fs` images, SHA-256 manifest verified by the engine job before parsing |
+| Previous green run | [#9 / 42022394239](https://github.com/Sensei002/stgr-ext4/actions/runs/42022394239), `push`, 2026-11-05T11:52Z, commit `e08904d` — first green engine run, but `--corpus` was not passed (silent skip) |
 | Driver steps | `Record tool versions`, `Record resolved WDK tool paths`, `Build driver`, `Generate unsigned catalog`, `Verify native x64 PE image`, artifact uploads — all `success` |
-| Artifacts | `stgr-ext4-driver-Debug`, `stgr-ext4-driver-Release`, `stgr-ext4-symbols-Debug`, `stgr-ext4-symbols-Release`, `stgr-ext4-cli` (14-day retention) |
+| Artifacts | `stgr-ext4-driver-Debug`, `stgr-ext4-driver-Release`, `stgr-ext4-symbols-Debug`, `stgr-ext4-symbols-Release`, `stgr-ext4-cli`, `stgr-ext4-corpus` (14-day retention) |
 | Security run | [#7 / 41990893045](https://github.com/Sensei002/stgr-ext4/actions/runs/41990893045), `success` |
 | Release workflow | Never run; no `v*.*.*` tag exists |
 

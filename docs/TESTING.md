@@ -152,7 +152,8 @@ A unit test must assert exact values and status codes. A test that only checks
 | `accept-1k`, `accept-2k`, `accept-4k` | accepted; block size 1024, 2048, 4096 |
 | `accept-4k-32byte-desc` | accepted; `^64bit`, so descriptors are 32 bytes |
 | `refuse-metadata-csum` | `StgrStatusChecksumNotVerified` |
-| `refuse-bigalloc`, `refuse-inline-data`, `refuse-encrypt` | `StgrStatusUnsupportedFeature` |
+| `refuse-bigalloc` | `StgrStatusBadGeometry` — mke2fs writes `blocks_per_group = 524288` (cluster ceiling), over the engine's `blockSize*8` group bitmap limit, and the image has no extents/filetype |
+| `refuse-inline-data`, `refuse-encrypt` | `StgrStatusUnsupportedFeature` |
 | `refuse-magic` | `StgrStatusBadMagic` |
 
 The job writes `expectations.txt` (name, expected status, expected block size),
@@ -394,8 +395,8 @@ substitute for a hash comparison and `e2fsck -fn`.
 | Code analysis | Never run (`/analyze` is not enabled yet) |
 | PE check | Green in CI runs 7 and 8 |
 | CLI fmt/clippy/test | Green in CI runs 7 and 8 |
-| Engine unit tests | Green in CI run 8: 71 checks, 0 failures, synthetic images only |
-| Corrupt corpus | Nine `mke2fs` images generated in CI; hashes verified before parsing |
+| Engine unit tests | Green in CI run 10: 71 checks, 0 failures; corpus parsed (9 images, 4 accepted, 5 refused for the documented reasons) |
+| Corrupt corpus | Nine `mke2fs` images generated in CI; hashes verified before parsing; corpus pins each refusal reason |
 | Fuzzing | Never run |
 | Driver load/unload | Never run |
 | Mount/read | Impossible (not implemented) |
@@ -405,5 +406,5 @@ substitute for a hash comparison and `e2fsck -fn`.
 | Game/performance | Never run |
 
 The correct conclusion is that the project has compiled source code, host-level
-parser tests over synthetic images, and no test evidence at any layer that
-touches a volume.
+parser tests over synthetic images and over a hash-verified nine-image mke2fs
+corpus (run 10), and no test evidence at any layer that touches a volume.
