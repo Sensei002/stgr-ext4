@@ -28,7 +28,7 @@ loaded in a VM and no volume has been mounted.
 | --- | --- | --- | --- |
 | 0 | Research, architecture, CI foundation | 0.5–1 month | **Done** (CI green on run 8; toolset versions recorded) |
 | 1 | Driver skeleton, registration, dispatch, package | 1–2 months | **In progress** (built and packaged in CI; never loaded or VM-tested) |
-| 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | **In progress** (parser, host tests, and nine-image mke2fs corpus green in CI run 10; kernel build of the engine still pending) |
+| 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | **In progress** (parser, host tests, and nine-image mke2fs corpus green in CI run 10; engine not yet compiled with the WDK kernel-mode toolset and not wired into the driver build; mount path not started) |
 | 3 | Read-only mount: VDO/VPB, Mount Manager, drive letter | 2–4 months | Not started |
 | 4 | Full read path: inodes, directories, extents, xattrs, cache | 3–6 months | Not started |
 | 5 | Journal parsing and recovery | 4–8 months | Not started |
@@ -146,13 +146,18 @@ Deliverables:
 
 **Exit gate:** the host test binary accepts known-good images, rejects every
 unsupported feature combination and every corrupted image in the corpus, and
-the kernel build passes `/W4 /WX` plus `/analyze` with a clean baseline.
+the engine compiles cleanly in the WDK kernel-mode toolset with `/W4 /WX` plus
+`/analyze` against a clean baseline when it is wired into the driver build.
 Mount success must still not be reported until the VDO/VPB work lands.
 
-**Not yet met:** the kernel build of the engine under WDK `Host.KMDF` is still
-missing, so `/W4 /WX` plus `/analyze` has not been run on the kernel target, and
-no VM load/unload or mount probe has been exercised. The host-side corpus is
-complete as of run 10: nine `mke2fs` images, a verified SHA-256 manifest, and an
+**Not yet met:** the engine is not yet compiled with the WDK kernel-mode toolset and
+is not wired into the driver build, so `/W4 /WX` plus `/analyze` has not been run
+on the kernel target, and no VM load/unload or mount probe has been exercised.
+Today the driver build compiles only `driver/src/driver.c` and `driver/src/dispatch.c`;
+the parser lives in `driver/ext4/` and is exercised only by the host test binary.
+That is the honest state and it is fine: mounting still does not exist, so the
+parser has no place to live in the driver yet. The host-side corpus is complete
+as of run 10: nine `mke2fs` images, a verified SHA-256 manifest, and an
 `e2fsck -fn` baseline, with 4 images accepted and 5 refused for the documented
 reasons. The one honest open detail in the corpus is bigalloc: the engine
 refuses the real `mke2fs` bigalloc image as `BadGeometry` (it writes
