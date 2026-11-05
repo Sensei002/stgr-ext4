@@ -52,7 +52,7 @@ if ($LASTEXITCODE -ne 0) {
 $text = $headers -join "`n"
 
 $machineOk = $text -match 'machine \(x64\)'
-$subsystemOk = $text -match 'subsystem \(Windows native\)'
+$subsystemOk = $text -match 'subsystem \((Windows )?native\)'
 
 $headers | Select-String -Pattern 'machine \(|subsystem \(' | ForEach-Object { Write-Host $_.Line.Trim() }
 
@@ -61,7 +61,7 @@ if (-not $machineOk) {
 }
 
 if (-not $subsystemOk) {
-    throw "The image is not a native kernel image. dumpbin did not report 'subsystem (Windows native)'."
+    throw "The image is not a native kernel image. dumpbin did not report a native subsystem."
 }
 
 Write-Host "Driver image check passed: x64 native image."
