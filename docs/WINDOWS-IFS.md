@@ -4,8 +4,9 @@ This document explains how STGR EXT4 fits the Windows Installable File System
 (IFS) contract, what the Milestone 1 code actually does, and what must be built
 before a volume can be mounted.
 
-It is a design and reference document. The driver has not been compiled or
-loaded; no behaviour below is claimed as verified.
+It is a design and reference document. The driver compiles and packages in CI
+(runs 7 and 8) but has never been loaded or unloaded; no behaviour below is
+claimed as verified.
 
 ---
 

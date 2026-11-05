@@ -1,10 +1,10 @@
 # GitHub Actions
 
-Status: **CI executing.** `ci.yml` run 7 on `main` completed green and
-`security.yml` run 7 passed on the same commit. The driver builds for Debug and
-Release x64, produces an INF catalog, and passes a native x64 PE check. **No
-workflow loads the driver, mounts a volume, or runs a VM test**, and nothing is
-signed.
+Status: **CI executing.** `ci.yml` run 8 on `main` completed green: five jobs,
+including the `Engine host tests` job that compiles the portable parser and runs
+its unit tests (71 checks). The driver builds for Debug and Release x64,
+produces an INF catalog, and passes a native x64 PE check. **No workflow loads
+the driver, mounts a volume, or runs a VM test**, and nothing is signed.
 
 The project is designed so that the supported build runs in GitHub Actions.
 Contributors do not need MSVC, the WDK, or Rust locally.
@@ -16,9 +16,11 @@ Contributors do not need MSVC, the WDK, or Rust locally.
 | Field | Value |
 | --- | --- |
 | Repository | `github.com/Sensei002/stgr-ext4`, branch `main` |
-| CI run | [#7 / 41991783567](https://github.com/Sensei002/stgr-ext4/actions/runs/41991783567), `push`, 2026-11-05T08:05Z, attempt 1 |
-| Commit | `164c359` — "Test: match dumpbin native subsystem spelling" |
-| Jobs | `Repository hygiene`; `Management / Rust 1.83.0`; `Driver / Debug x64`; `Driver / Release x64` — all `success` |
+| CI run | [#8 / 42019097667](https://github.com/Sensei002/stgr-ext4/actions/runs/42019097667), `push`, 2026-11-05T11:27Z, attempt 1 |
+| Commit | `55a1236` — "Engine tests: drop the unused decoded variable in the policy test" |
+| Jobs | `Repository hygiene`; `Engine host tests`; `Management / Rust 1.83.0`; `Driver / Debug x64`; `Driver / Release x64` — all `success` |
+| Engine job | `Compile and run engine host tests` passed: `71 checks, 0 failure(s)` |
+| Previous green run | [#7 / 41991783567](https://github.com/Sensei002/stgr-ext4/actions/runs/41991783567), `push`, 2026-11-05T08:05Z, commit `164c359` — first green driver run, four jobs (no engine job yet) |
 | Driver steps | `Record tool versions`, `Record resolved WDK tool paths`, `Build driver`, `Generate unsigned catalog`, `Verify native x64 PE image`, artifact uploads — all `success` |
 | Artifacts | `stgr-ext4-driver-Debug`, `stgr-ext4-driver-Release`, `stgr-ext4-symbols-Debug`, `stgr-ext4-symbols-Release`, `stgr-ext4-cli` (14-day retention) |
 | Security run | [#7 / 41990893045](https://github.com/Sensei002/stgr-ext4/actions/runs/41990893045), `success` |
@@ -29,10 +31,11 @@ only at `Verify native x64 PE image`, so compilation, catalog generation, and
 packaging were already working. Run 7 corrected the expected dumpbin spelling.
 Those earlier failures are superseded, not hidden.
 
-Not recorded: the MSVC version. The two recording steps succeed and print the
-values into the job log, but anonymous users cannot download Actions logs, so
-transcribing them needs a signed-in session. The pinned WDK/SDK content and Rust
-versions are in §2.
+Toolset versions printed by the `Record tool versions` and `Record resolved WDK
+tool paths` steps of that run: PowerShell `7.6.9`, MSBuild `17.14.60.43110`,
+NuGet `7.9.0.83`, MSVC `14.44.35207` (Visual Studio 2022 Enterprise), platform
+`10.0.26100.0`, WDK/SDK content `10.0.26100.6584`, Rust `1.83.0`. §2 records
+them with their sources.
 
 ---
 
@@ -75,13 +78,16 @@ has `contents: write`. No workflow has access to a signing key.
 | --- | --- | --- |
 | Runner (driver) | `windows-2022` | GitHub-hosted |
 | Runner (hygiene, Rust) | `windows-2025` | GitHub-hosted |
-| Visual Studio (driver) | 2022 (17.x) | `windows-2022` image |
-| MSBuild | via `microsoft/setup-msbuild` | Action |
+| Visual Studio (driver) | 2022 Enterprise, 17.14 | `windows-2022` image |
+| MSVC toolset | `14.44.35207` | `Record tool versions` (run 7 log) |
+| MSBuild | `17.14.60.43110` via `microsoft/setup-msbuild` | `Record tool versions` (run 7 log) |
+| PowerShell | `7.6.9` | Runner image; `Record tool versions` (run 7 log) |
+| Platform version | `10.0.26100.0` (`TargetPlatformVersion`) | `Record resolved WDK tool paths` (run 7 log) |
 | WDK toolset | `WindowsKernelModeDriver10.0` | WDK VS extension in runner image |
 | WDK content | `Microsoft.Windows.WDK.x64` 10.0.26100.6584 | NuGet |
 | SDK content | `Microsoft.Windows.SDK.CPP` / `.CPP.x64` 10.0.26100.6584 | NuGet |
 | Rust | 1.83.0 | `rust-toolchain.toml` |
-| NuGet | runner-provided `nuget.exe` | Runner image |
+| NuGet | `7.9.0.83` | Runner image; `Record tool versions` (run 7 log) |
 
 The `windows-2022` image supplies the WDK **Visual Studio extension** (the
 platform toolset) but not the standalone WDK content. The project restores the
@@ -328,8 +334,8 @@ claimed.
 Other limitations:
 
 - The `windows-2022` (driver) and `windows-2025` (Rust/hygiene) labels are
-  moving images. WDK/SDK content is pinned; MSVC is not. Record the compiler
-  version from the log.
+  moving images. WDK/SDK content is pinned; MSVC is not. The run 7 values are
+  in §2 — a snapshot, not a pin. Re-record them when the images change.
 - NuGet package hashes are not verified after restore. A future improvement is
   to pin checksums.
 - A green YAML parse is not a green build. Only a run is evidence.
@@ -338,15 +344,11 @@ Other limitations:
 
 ## 11. First push and first run
 
-The first push and the first green run have happened (§0). What remains from
-that checklist:
+The first push, the first green run, and the toolset transcription have all
+happened (§0, §2). What remains from that checklist:
 
-1. Open the run's **Driver / Debug x64** job and expand `Record tool versions`
-   and `Record resolved WDK tool paths`.
-2. Record the MSVC, WDK content, SDK content, and NuGet versions from that log;
-   the values are printed there but logs are not anonymously downloadable.
-3. Download the artifacts only to a disposable VM.
-4. Do not create a `v0.1.0` tag until CI is green and the version gate is
+1. Download the artifacts only to a disposable VM.
+2. Do not create a `v0.1.0` tag until CI is green and the version gate is
    understood. A tag publishes an unsigned pre-release.
 
 ### Recommended repository settings

@@ -6,13 +6,16 @@ has never been compiled does not satisfy a milestone.
 
 Status legend: **done**, **in progress**, **not started**, **blocked**.
 
-Current position: **Milestone 1 source built in CI, no driver load.** GitHub
-Actions CI run 7 (`164c359`, 2026-11-05) completed green: hygiene, Debug and
-Release x64 driver builds with INF catalog and native PE verification, and the
-Rust CLI. The `Security` workflow passed on the same commit. Earlier runs 1–6
-failed while the build was brought up and are superseded. No driver has been
-loaded in a VM, no volume has been mounted, and no toolset version has been
-transcribed from the run log yet.
+Current position: **Milestone 0 closed, Milestone 1 source built in CI, the
+Milestone 2 parser green on the host.** GitHub Actions CI run 8 (`55a1236`,
+2026-11-05) completed green: hygiene, Debug and Release x64 driver builds with
+INF catalog and native PE verification, the Rust CLI, and the new `Engine host
+tests` job (71 checks, 0 failures). Run 7 (`164c359`) was the first green
+driver run and `Security` passed on both commits. Runs 1–6 failed while the
+build was brought up and are superseded. The toolset versions the Milestone 0
+gate asks for are transcribed in
+[`docs/GITHUB-ACTIONS.md`](docs/GITHUB-ACTIONS.md) §2. No driver has been
+loaded in a VM and no volume has been mounted.
 
 ---
 
@@ -20,9 +23,9 @@ transcribed from the run log yet.
 
 | # | Milestone | Estimate | Status |
 | --- | --- | --- | --- |
-| 0 | Research, architecture, CI foundation | 0.5–1 month | **In progress** (CI green on run 7; toolset versions not yet transcribed) |
+| 0 | Research, architecture, CI foundation | 0.5–1 month | **Done** (CI green on run 8; toolset versions recorded) |
 | 1 | Driver skeleton, registration, dispatch, package | 1–2 months | **In progress** (built and packaged in CI; never loaded or VM-tested) |
-| 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | Not started |
+| 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | **In progress** (parser and host tests green; corpus and kernel build pending) |
 | 3 | Read-only mount: VDO/VPB, Mount Manager, drive letter | 2–4 months | Not started |
 | 4 | Full read path: inodes, directories, extents, xattrs, cache | 3–6 months | Not started |
 | 5 | Journal parsing and recovery | 4–8 months | Not started |
@@ -53,21 +56,23 @@ Deliverables:
 - [x] GitHub Actions workflow definitions.
 - [x] First successful `ci.yml` run on GitHub — run 7 on `164c359`,
       all four jobs green.
-- [ ] Recorded compiler and toolset versions from that run.
+- [x] Recorded compiler and toolset versions from that run — MSVC
+      `14.44.35207`, MSBuild `17.14.60.43110`, NuGet `7.9.0.83`, PowerShell
+      `7.6.9`, platform `10.0.26100.0`.
 
 **Exit gate:** all five workflows parse, `ci.yml` completes green on a pushed
 commit, and the log records the MSVC, WDK content, SDK content, and Rust
-versions. Until then Milestone 0 is not closed.
+versions. **Met** as of run 8.
 
-**Remaining gap:** the five workflow files are registered and `ci.yml` is green,
-so the parse and green-run parts of the gate are met. The versions the gate asks
-for are printed by the `Record tool versions` and `Record resolved WDK tool
-paths` steps, which succeeded in run 7. The pinned values (WDK/SDK content
-`10.0.26100.6584`, Rust `1.83.0`) are already recorded in
-[`docs/GITHUB-ACTIONS.md`](docs/GITHUB-ACTIONS.md). The moving MSVC version is
-**not** recorded: anonymous users cannot download Actions logs, so a signed-in
-account must open the run and transcribe it. Milestone 0 stays open until that
-happens.
+**Recorded evidence:** the five workflow files are registered and `ci.yml` runs
+7 and 8 are green. The values printed by the `Record tool versions` and
+`Record resolved WDK tool paths` steps are transcribed in
+[`docs/GITHUB-ACTIONS.md`](docs/GITHUB-ACTIONS.md) §2: MSVC `14.44.35207`
+(Visual Studio 2022 Enterprise 17.14), MSBuild `17.14.60.43110`, NuGet
+`7.9.0.83`, PowerShell `7.6.9`, `TargetPlatformVersion` `10.0.26100.0`,
+WDK/SDK content `10.0.26100.6584`, Rust `1.83.0`. Every part of the exit gate
+is met, so the milestone is closed. These values are a snapshot of moving
+runner images, not a pin; re-record them when the images change.
 
 ---
 
@@ -109,23 +114,25 @@ without mounting it.
 
 Status: the engine skeleton, little-endian decoders, overflow-checked helpers,
 block-I/O callback boundary, bounded superblock read, superblock validation,
-and the feature policy are authored under `driver/ext4`, with host tests in
-`driver/ext4/tests` and a `Engine host tests` CI job to build and run them.
-**None of it has been compiled yet** — that job performs the first build, and
-the authoring workspace has no C compiler. `metadata_csum` volumes are refused
-with `StgrStatusChecksumNotVerified` until the CRC-32C path is validated
-against images from a pinned `e2fsprogs`; refusing is the safe direction.
+and the feature policy are implemented under `driver/ext4`, with host tests in
+`driver/ext4/tests`. The `Engine host tests` job compiles them with MSVC at
+`/W4 /WX` and runs them: **71 checks pass with 0 failures** in CI run 8
+(`55a1236`). Still missing are the corrupt-image corpus, the approved-volume
+allowlist, and any kernel-context build of the engine. `metadata_csum` volumes
+are refused with `StgrStatusChecksumNotVerified` until the CRC-32C path is
+validated against images from a pinned `e2fsprogs`; refusing is the safe
+direction.
 
 Deliverables:
 
-- [ ] Freestanding engine skeleton under `driver/ext4/` with no kernel headers.
-- [ ] Block-I/O and allocation callback interfaces.
-- [ ] Bounded superblock read at byte 1024.
-- [ ] Little-endian decoders with overflow-checked arithmetic.
-- [ ] Superblock validation: magic, revision, block size, geometry, UUID,
+- [x] Freestanding engine skeleton under `driver/ext4/` with no kernel headers.
+- [x] Block-I/O callback interface (read-only; no allocation callback yet).
+- [x] Bounded superblock read at byte 1024.
+- [x] Little-endian decoders with overflow-checked arithmetic.
+- [x] Superblock validation: magic, revision, block size, geometry, UUID,
       label, feature sets, inode size, descriptor size, checksum seed/type,
       state and error flags.
-- [ ] Feature policy engine implementing the matrix in
+- [x] Feature policy engine implementing the matrix in
       [`docs/FILESYSTEM-COMPATIBILITY.md`](docs/FILESYSTEM-COMPATIBILITY.md).
 - [ ] Approved-volume allowlist lookup (design in
       [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md)).
@@ -137,6 +144,10 @@ Deliverables:
 unsupported feature combination and every corrupted image in the corpus, and
 the kernel build passes `/W4 /WX` plus `/analyze` with a clean baseline.
 Mount success must still not be reported until the VDO/VPB work lands.
+
+**Not met yet:** the passing host tests use synthetic images built in memory,
+so no image from a real `mke2fs` has been parsed, and there is no corpus of
+rejected combinations or corrupted images.
 
 ---
 

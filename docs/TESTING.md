@@ -1,13 +1,13 @@
 # Testing strategy
 
 Status: **no filesystem test has been executed against a volume.** Compile and
-static layers run in CI: run 7 was green for hygiene, the Rust CLI
-(format, Clippy, tests, link), and Debug/Release x64 driver builds with catalog
-generation and the PE check. The engine's host unit tests are authored under
-`driver/ext4/tests` and run through `scripts/Test-Engine.ps1`, but they have
-**not been executed yet** — the engine CI job first runs on the next push, and
-no compiler exists in the authoring workspace. The driver has never been
-loaded, no VM exists, and there is no EXT4 image corpus.
+static layers run in CI: run 8 (`55a1236`) was green for hygiene, the Rust CLI
+(format, Clippy, tests, link), Debug/Release x64 driver builds with catalog
+generation and the PE check, and the engine host tests. `scripts/Test-Engine.ps1`
+compiles the engine and its tests with MSVC at `/W4 /WX` and runs them: **71
+checks, 0 failures** in run 8. Every image those tests use is built in memory,
+so none of it proves parsing of a real `mke2fs` volume. The driver has never
+been loaded, no VM exists, and there is no EXT4 image corpus.
 
 This document defines the test ladder, the evidence required at each level, and
 the boundary between what CI can prove and what only a lab can prove.
@@ -114,12 +114,10 @@ locates MSVC through `vswhere`, compiles the engine plus `driver/ext4/tests` at
 from the `Engine host tests` job, so a parser change is proven without a driver,
 a partition, or a VM.
 
-The test harness is built around:
-
-- an in-memory block device;
-- a file-backed block device;
-- a fault-injecting device (short read, EIO, torn write, lost flush);
-- an allocator that can fail on demand.
+The harness today has an in-memory block device with a configurable size and a
+short-read mode that exercises the read boundary. Planned additions, not yet
+written: a file-backed device, injected I/O errors, torn writes, lost flushes,
+and an allocator that can fail on demand.
 
 Test categories:
 
@@ -127,7 +125,7 @@ Test categories:
 | --- | --- |
 | Endian helpers | Known byte sequences, unaligned input |
 | Overflow | Counts and offsets near `SIZE_MAX`, `UINT32_MAX` |
-| Superblock | Valid images, bad magic, bad geometry, bad checksum |
+| Superblock | Valid images, bad magic, bad geometry, refused features, checksum gate |
 | Group descriptors | 32/64-byte, sparse, flex_bg, checksum |
 | Bitmaps | Last partial byte, uninitialised groups |
 | Inodes | 128/256-byte, extra_isize, size high/low, checksum |
@@ -345,7 +343,7 @@ tested, and no benchmark has been run.
 | Hygiene | Yes | Yes |
 | Compile | Yes | Yes |
 | Clippy/tests | Yes | Yes |
-| Engine unit tests | Yes (future) | Yes |
+| Engine unit tests | Yes | Yes |
 | Fuzzing | Short run (future) | Long run |
 | Corrupt corpus | Yes (future) | Yes |
 | Driver load/unload | **No** | Yes |
@@ -390,12 +388,12 @@ substitute for a hash comparison and `e2fsck -fn`.
 
 | Test | Status |
 | --- | --- |
-| Hygiene script | Passes locally and in CI run 7 |
-| Driver compile | Green in CI run 7 (Debug and Release x64) |
+| Hygiene script | Passes locally and in CI runs 7 and 8 |
+| Driver compile | Green in CI runs 7 and 8 (Debug and Release x64) |
 | Code analysis | Never run (`/analyze` is not enabled yet) |
-| PE check | Green in CI run 7 |
-| CLI fmt/clippy/test | Green in CI run 7 |
-| Engine unit tests | Authored; first run is the next CI push |
+| PE check | Green in CI runs 7 and 8 |
+| CLI fmt/clippy/test | Green in CI runs 7 and 8 |
+| Engine unit tests | Green in CI run 8: 71 checks, 0 failures, synthetic images only |
 | Corrupt corpus | Does not exist |
 | Fuzzing | Never run |
 | Driver load/unload | Never run |
@@ -405,4 +403,6 @@ substitute for a hash comparison and `e2fsck -fn`.
 | Hardware/hotplug | Never run |
 | Game/performance | Never run |
 
-The correct conclusion is that the project has source code and no test evidence.
+The correct conclusion is that the project has compiled source code, host-level
+parser tests over synthetic images, and no test evidence at any layer that
+touches a volume.

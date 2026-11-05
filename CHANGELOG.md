@@ -9,13 +9,15 @@ it publishes usable releases.
 
 **No release in this file has been built, loaded, or tested on a real system.**
 The repository was authored in a workspace without MSVC, the WDK, Rust, Git, or
-a Windows VM. It now builds in GitHub Actions: CI run 7 on commit `164c359`
+a Windows VM. It now builds in GitHub Actions: CI run 8 on commit `55a1236`
 completed green with hygiene, Debug and Release x64 driver builds, INF catalog
-generation, native PE verification, and a format/Clippy/test/link pass of the
-Rust CLI. **No driver has been loaded, no volume mounted, no file read, and no
-VM test executed**, so no artifact is installable or usable. Entries describe
-source-level and build-level work only. Claims of driver loading, mounting, data
-integrity, or game compatibility would be false and are therefore not made.
+generation, native PE verification, a format/Clippy/test/link pass of the Rust
+CLI, and the host build and execution of the portable EXT4 parser (71 checks,
+0 failures). **No driver has been loaded, no volume mounted, no file read, and
+no VM test executed**, so no artifact is installable or usable. Entries
+describe source-level and build-level work only. Claims of driver loading,
+mounting, data integrity, or game compatibility would be false and are
+therefore not made.
 
 ## [Unreleased]
 
@@ -52,6 +54,19 @@ integrity, or game compatibility would be false and are therefore not made.
   configuration, compatibility matrix, data integrity, gaming compatibility,
   testing, installation, signing, CI operation, troubleshooting, roadmap,
   contributing, and security policy.
+- Milestone 2 engine foundation under `driver/ext4`, freestanding C with no
+  kernel headers:
+  - Little-endian decoders and overflow-checked multiply/add helpers.
+  - Block-I/O callback boundary; the engine never dereferences a device.
+  - Bounded 1024-byte superblock read with short-read and failure detection.
+  - Superblock validation: magic, revision, block size, geometry, inode size,
+    descriptor size, feature sets, state and error flags.
+  - Feature policy that refuses required-but-missing and unknown incompatible
+    bits, reporting which set and which bit was refused.
+  - `metadata_csum` volumes are refused with `StgrStatusChecksumNotVerified`
+    instead of trusted: CRC-32C is deliberately not implemented yet.
+  - Host unit tests (71 checks) and `scripts/Test-Engine.ps1`, wired into a new
+    `Engine host tests` CI job.
 
 ### Changed
 
@@ -67,6 +82,11 @@ integrity, or game compatibility would be false and are therefore not made.
     it still rejects every user-mode subsystem.
   - Driver builds pinned to the `windows-2022` image, because the pinned
     10.0.26100 WDK package ships 17.0 MSBuild task assemblies.
+- Engine host test failures found by the first two engine job runs:
+  - `%d` used with `long` arguments replaced by `%ld` (`C4477` under `/WX`).
+  - The 1 KiB geometry case no longer leaves `INCOMPAT_64BIT` set, so it
+    asserts the 32-byte descriptor size the test names.
+  - Unused `decoded` variable removed from the feature-policy test (`C4101`).
 
 ### Security
 
@@ -77,8 +97,10 @@ integrity, or game compatibility would be false and are therefore not made.
 
 ### Known limitations
 
-- The driver compiles and packages in CI (run 7) but has never been loaded or
-  unloaded.
+- The driver compiles and packages in CI (runs 7 and 8) but has never been
+  loaded or unloaded.
+- The EXT4 parser has only been run against synthetic images built in memory;
+  no image created by `mke2fs` has been parsed.
 - No EXT4 volume can be mounted.
 - No file can be read or written.
 - There is no volume device object, VPB, drive letter, cache integration, or
