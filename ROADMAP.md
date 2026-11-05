@@ -6,9 +6,13 @@ has never been compiled does not satisfy a milestone.
 
 Status legend: **done**, **in progress**, **not started**, **blocked**.
 
-Current position: **Milestone 1 source authored, no build executed**. No
-milestone below Milestone 2 has run in GitHub Actions yet, and no driver has
-been loaded in a VM.
+Current position: **Milestone 1 source built in CI, no driver load.** GitHub
+Actions CI run 7 (`164c359`, 2026-11-05) completed green: hygiene, Debug and
+Release x64 driver builds with INF catalog and native PE verification, and the
+Rust CLI. The `Security` workflow passed on the same commit. Earlier runs 1–6
+failed while the build was brought up and are superseded. No driver has been
+loaded in a VM, no volume has been mounted, and no toolset version has been
+transcribed from the run log yet.
 
 ---
 
@@ -16,8 +20,8 @@ been loaded in a VM.
 
 | # | Milestone | Estimate | Status |
 | --- | --- | --- | --- |
-| 0 | Research, architecture, CI foundation | 0.5–1 month | **In progress** (documents and workflows authored; CI never run) |
-| 1 | Driver skeleton, registration, dispatch, package | 1–2 months | **In progress** (source authored; never compiled) |
+| 0 | Research, architecture, CI foundation | 0.5–1 month | **In progress** (CI green on run 7; toolset versions not yet transcribed) |
+| 1 | Driver skeleton, registration, dispatch, package | 1–2 months | **In progress** (built and packaged in CI; never loaded or VM-tested) |
 | 2 | Superblock, geometry, feature validation, parser tests | 1–2 months | Not started |
 | 3 | Read-only mount: VDO/VPB, Mount Manager, drive letter | 2–4 months | Not started |
 | 4 | Full read path: inodes, directories, extents, xattrs, cache | 3–6 months | Not started |
@@ -47,12 +51,23 @@ Deliverables:
 - [x] WDK/SDK version selection and NuGet pinning.
 - [x] Repository hygiene script.
 - [x] GitHub Actions workflow definitions.
-- [ ] First successful `ci.yml` run on GitHub.
+- [x] First successful `ci.yml` run on GitHub — run 7 on `164c359`,
+      all four jobs green.
 - [ ] Recorded compiler and toolset versions from that run.
 
 **Exit gate:** all five workflows parse, `ci.yml` completes green on a pushed
 commit, and the log records the MSVC, WDK content, SDK content, and Rust
 versions. Until then Milestone 0 is not closed.
+
+**Remaining gap:** the five workflow files are registered and `ci.yml` is green,
+so the parse and green-run parts of the gate are met. The versions the gate asks
+for are printed by the `Record tool versions` and `Record resolved WDK tool
+paths` steps, which succeeded in run 7. The pinned values (WDK/SDK content
+`10.0.26100.6584`, Rust `1.83.0`) are already recorded in
+[`docs/GITHUB-ACTIONS.md`](docs/GITHUB-ACTIONS.md). The moving MSVC version is
+**not** recorded: anonymous users cannot download Actions logs, so a signed-in
+account must open the run and transcribe it. Milestone 0 stays open until that
+happens.
 
 ---
 
@@ -70,8 +85,11 @@ Deliverables:
       `Information = 0`.
 - [x] INF, version resource, WDK project, packaging scripts.
 - [x] Unsigned-package notice and catalog generation script.
-- [ ] Successful Debug and Release x64 builds in GitHub Actions.
-- [ ] `dumpbin` confirmation of x64 native images.
+- [x] Successful Debug and Release x64 builds in GitHub Actions — run 7,
+      Debug and Release packages plus PDBs uploaded as artifacts.
+- [x] `dumpbin` confirmation of x64 native images — `Verify native x64 PE
+      image` passed in run 7. The check accepts dumpbin's actual
+      `subsystem (Native)` spelling and still rejects a user-mode subsystem.
 - [ ] Test-VM load/unload with Driver Verifier and no bugcheck.
 - [ ] Confirmation that no volume is mounted and no mount success is reported.
 

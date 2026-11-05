@@ -7,14 +7,15 @@ it publishes usable releases.
 
 ## Verification status
 
-**No release in this file has been built, loaded, or tested.** The repository
-was authored in a workspace without MSVC, the WDK, Rust, Git, or a Windows VM.
-Two static checks have since been run locally: `scripts/Test-Repository.ps1`
-passed, and the Rust workspace was clean under `cargo fmt --check` and
-`cargo clippy -D warnings` on toolchain 1.83.0. No Rust binary was linked and no
-Rust test was executed. Entries describe source-level work only. Claims of
-compilation, CI success, driver loading, mounting, or data integrity would be
-false and are therefore not made.
+**No release in this file has been built, loaded, or tested on a real system.**
+The repository was authored in a workspace without MSVC, the WDK, Rust, Git, or
+a Windows VM. It now builds in GitHub Actions: CI run 7 on commit `164c359`
+completed green with hygiene, Debug and Release x64 driver builds, INF catalog
+generation, native PE verification, and a format/Clippy/test/link pass of the
+Rust CLI. **No driver has been loaded, no volume mounted, no file read, and no
+VM test executed**, so no artifact is installable or usable. Entries describe
+source-level and build-level work only. Claims of driver loading, mounting, data
+integrity, or game compatibility would be false and are therefore not made.
 
 ## [Unreleased]
 
@@ -58,7 +59,14 @@ false and are therefore not made.
 
 ### Fixed
 
-- Nothing yet.
+- Driver build failures exposed by the first CI runs:
+  - 64-bit MSBuild so the x64 `InfVerif.dll` from the WDK package loads.
+  - `rc.exe` resolved from the SDK NuGet package instead of the runner image.
+  - INF adjusted to satisfy universal driver validation rules.
+  - Driver image check accepts dumpbin's actual `subsystem (Native)` spelling;
+    it still rejects every user-mode subsystem.
+  - Driver builds pinned to the `windows-2022` image, because the pinned
+    10.0.26100 WDK package ships 17.0 MSBuild task assemblies.
 
 ### Security
 
@@ -69,16 +77,16 @@ false and are therefore not made.
 
 ### Known limitations
 
-- The driver has never been compiled.
-- The driver has never been loaded.
+- The driver compiles and packages in CI (run 7) but has never been loaded or
+  unloaded.
 - No EXT4 volume can be mounted.
 - No file can be read or written.
 - There is no volume device object, VPB, drive letter, cache integration, or
   journal support.
 - The management CLI's `status` command only queries the service control
   manager; it does not contact a driver control interface.
-- The GitHub Actions definitions are unverified; YAML validity does not imply
-  a successful build.
+- CI proves compilation and packaging only. It does not load the driver, mount
+  a volume, or exercise any kernel path, and it does not sign anything.
 - Test signing and Secure Boot constraints make the unsigned artifact
   unloadable on a normal Windows 11 system.
 

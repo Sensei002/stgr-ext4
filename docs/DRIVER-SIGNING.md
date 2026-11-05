@@ -190,8 +190,8 @@ The current repository has no installer.
 
 | Item | Status |
 | --- | --- |
-| Unsigned build | Intended output |
-| Unsigned catalog | Script exists, never run |
+| Unsigned build | Built in CI (run 7), never install-tested |
+| Unsigned catalog | Generated in CI (run 7), never install-tested |
 | Test signing | Not performed |
 | Production certificate | None |
 | Attestation / WHQL | Not started |

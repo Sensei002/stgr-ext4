@@ -9,16 +9,17 @@ Dokany, FUSE, user-mode proxy, Linux virtual machine, or file-copy layer in the
 data path. The long-term goal is a real file system driver with correct caching,
 locking, paging I/O, crash consistency, and drive-letter integration.
 
-> **Project status: Milestone 1 source, not yet built or tested.**
+> **Project status: Milestone 1 source, built in CI, never loaded.**
 >
 > The driver in this repository registers itself as a file system and safely
 > declines every volume. It does not parse EXT4, does not mount anything, and
-> has no read or write support. The driver source has been authored but **no
-> driver compilation, driver load, or CI run has been performed in this
-> workspace**. The Rust workspace is `cargo fmt`- and Clippy-clean (Rust
-> 1.83.0) but has not been linked or executed; no linker is installed here.
-> Nothing here is installable on a normal Windows 11 machine. See
-> [`ROADMAP.md`](ROADMAP.md) and [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md).
+> has no read or write support. GitHub Actions builds it for Debug and Release
+> x64, generates the INF catalog, and confirms a native x64 PE image (CI run 7
+> on `164c359`); the Rust CLI formats, lints, tests, and links in the same run.
+> **No driver load, no mount, and no VM test have been performed.** Nothing
+> here is installable on a normal Windows 11 machine: the packages are
+> unsigned. See [`ROADMAP.md`](ROADMAP.md) and
+> [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md).
 
 ---
 
@@ -68,8 +69,8 @@ build at a disk that contains data.
 | File reads and writes | Not implemented |
 | Journal replay | Not implemented |
 | Management CLI | `version`, `help`, `status` only; other commands exit 70 |
-| Compiler verification | **Not performed** for the driver; Rust workspace is fmt/Clippy-clean only |
-| GitHub Actions verification | **Not performed** (workflows authored, never run) |
+| Compiler verification | **Performed in CI**: Debug and Release x64 driver builds, INF catalog, native PE check |
+| GitHub Actions verification | **Passing**: `ci.yml` and `security.yml` run 7 on `164c359` |
 | Kernel/VM testing | **Not performed**; no test VM exists |
 
 The management CLI reports `filesystem mounting: not implemented` and never

@@ -1,12 +1,38 @@
 # GitHub Actions
 
-Status: **workflows authored, never executed.** This document describes what
-the workflows are intended to do. It is not a report of a green build.
+Status: **CI executing.** `ci.yml` run 7 on `main` completed green and
+`security.yml` run 7 passed on the same commit. The driver builds for Debug and
+Release x64, produces an INF catalog, and passes a native x64 PE check. **No
+workflow loads the driver, mounts a volume, or runs a VM test**, and nothing is
+signed.
 
 The project is designed so that the supported build runs in GitHub Actions.
-Contributors do not need MSVC, the WDK, or Rust locally. The workspace used to
-author this repository had none of those tools and no Git remote, so no run has
-been observed.
+Contributors do not need MSVC, the WDK, or Rust locally.
+
+---
+
+## 0. Recorded run evidence
+
+| Field | Value |
+| --- | --- |
+| Repository | `github.com/Sensei002/stgr-ext4`, branch `main` |
+| CI run | [#7 / 41991783567](https://github.com/Sensei002/stgr-ext4/actions/runs/41991783567), `push`, 2026-11-05T08:05Z, attempt 1 |
+| Commit | `164c359` — "Test: match dumpbin native subsystem spelling" |
+| Jobs | `Repository hygiene`; `Management / Rust 1.83.0`; `Driver / Debug x64`; `Driver / Release x64` — all `success` |
+| Driver steps | `Record tool versions`, `Record resolved WDK tool paths`, `Build driver`, `Generate unsigned catalog`, `Verify native x64 PE image`, artifact uploads — all `success` |
+| Artifacts | `stgr-ext4-driver-Debug`, `stgr-ext4-driver-Release`, `stgr-ext4-symbols-Debug`, `stgr-ext4-symbols-Release`, `stgr-ext4-cli` (14-day retention) |
+| Security run | [#7 / 41990893045](https://github.com/Sensei002/stgr-ext4/actions/runs/41990893045), `success` |
+| Release workflow | Never run; no `v*.*.*` tag exists |
+
+Runs 1–6 on this branch failed while the build was brought up; run 6 failed
+only at `Verify native x64 PE image`, so compilation, catalog generation, and
+packaging were already working. Run 7 corrected the expected dumpbin spelling.
+Those earlier failures are superseded, not hidden.
+
+Not recorded: the MSVC version. The two recording steps succeed and print the
+values into the job log, but anonymous users cannot download Actions logs, so
+transcribing them needs a signed-in session. The pinned WDK/SDK content and Rust
+versions are in §2.
 
 ---
 
@@ -159,7 +185,13 @@ does not make the package installable.
 The PE check uses `dumpbin /headers` and requires:
 
 - `machine (x64)`;
-- `subsystem (Windows native)`.
+- `subsystem (Native)` or `subsystem (Windows native)`.
+
+dumpbin labels the native subsystem `subsystem (Native)`; older MSVC toolchains
+printed `Native Windows`. The check accepts either spelling so a correct kernel
+image is not rejected, and it still fails on `Windows CUI`, `Windows GUI`, or
+any other user-mode subsystem. The project sets `<SubSystem>Native</SubSystem>`
+and `DriverType` `WDM`.
 
 It catches a user-mode DLL or an x86 image, not a logic bug.
 
@@ -299,27 +331,15 @@ Other limitations:
 
 ## 11. First push and first run
 
-This repository was authored without Git installed. The following steps are for
-a machine that has Git and a GitHub account:
+The first push and the first green run have happened (§0). What remains from
+that checklist:
 
-```powershell
-git init
-git add .
-git commit -m "Initial Milestone 0/1 foundation"
-git branch -M main
-git remote add origin https://github.com/<owner>/<repo>.git
-git push -u origin main
-```
-
-Then:
-
-1. Open **Actions** and select **CI**.
-2. Wait for the `hygiene` job.
-3. Inspect `driver` and `management`.
-4. Open the **Driver build** logs and record the MSVC, WDK, SDK, and NuGet
-   versions.
-5. Download the artifacts only to a disposable VM.
-6. Do not create a `v0.1.0` tag until CI is green and the version gate is
+1. Open the run's **Driver / Debug x64** job and expand `Record tool versions`
+   and `Record resolved WDK tool paths`.
+2. Record the MSVC, WDK content, SDK content, and NuGet versions from that log;
+   the values are printed there but logs are not anonymously downloadable.
+3. Download the artifacts only to a disposable VM.
+4. Do not create a `v0.1.0` tag until CI is green and the version gate is
    understood. A tag publishes an unsigned pre-release.
 
 ### Recommended repository settings

@@ -388,15 +388,15 @@ parser memory safety under all inputs. Both are required.
 
 | Component | Status |
 | --- | --- |
-| FSDO creation and registration | Source written, uncompiled |
-| Unload | Source written, uncompiled, unexercised |
-| Dispatch defaults | Source written, uncompiled |
-| Mount refusal | Source written, uncompiled |
+| FSDO creation and registration | Compiles in CI, never loaded |
+| Unload | Compiles in CI, never loaded or exercised |
+| Dispatch defaults | Compiles in CI, never loaded |
+| Mount refusal | Compiles in CI, never loaded |
 | VDO / VPB | Not implemented |
 | Engine and callbacks | Not implemented |
 | Cache / FCB / CCB / SCB | Not implemented |
 | Management service | Not implemented |
-| CLI scaffold | Source written, never compiled or tested |
-| CI | Definitions written, never run |
+| CLI scaffold | Formats, lints, tests, and links in CI |
+| CI | Green: `ci.yml` run 7 (Debug and Release x64 driver builds) |
 
 Nothing in this document should be read as evidence that a component works.
