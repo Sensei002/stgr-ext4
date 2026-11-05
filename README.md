@@ -108,7 +108,8 @@ Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
 
 ### To build (CI or a Windows development machine)
 
-- Windows 10/11 x64 or a `windows-2025` GitHub-hosted runner.
+- Windows 10/11 x64 with Visual Studio 2022 and the WDK extension, or a
+  `windows-2022` GitHub-hosted runner for the driver build.
 - Visual Studio 2022 with the **Desktop development with C++** workload and the
   **Windows Driver Kit Visual Studio extension**.
 - WDK and Windows SDK content, pinned through NuGet:

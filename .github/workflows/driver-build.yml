@@ -14,7 +14,11 @@ permissions:
 jobs:
   build:
     name: ${{ matrix.configuration }} x64
-    runs-on: windows-2025
+    # The pinned 10.0.26100 WDK NuGet package ships MSBuild task assemblies
+    # named Microsoft.DriverKit.Build.Tasks.17.0.dll. The windows-2025 label
+    # now resolves to Visual Studio 2026 (18.x), which looks for the 18.0
+    # assembly and fails with MSB4062. Keep driver builds on the VS2022 image.
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:

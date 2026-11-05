@@ -126,8 +126,9 @@ for this project.
 
 | Component | Version | Source |
 | --- | --- | --- |
-| Runner | `windows-2025` | GitHub-hosted |
-| Visual Studio | 2022 (17.x) | Runner image |
+| Runner (driver) | `windows-2022` | GitHub-hosted |
+| Runner (Rust, hygiene) | `windows-2025` | GitHub-hosted |
+| Visual Studio (driver) | 2022 (17.x) | `windows-2022` image |
 | Platform toolset | `WindowsKernelModeDriver10.0` | WDK VS extension in the runner image (10.0.26100.16) |
 | WDK content | `Microsoft.Windows.WDK.x64` **10.0.26100.6584** | NuGet |
 | Windows SDK content | `Microsoft.Windows.SDK.CPP` / `.CPP.x64` **10.0.26100.6584** | NuGet |
@@ -135,22 +136,27 @@ for this project.
 | Target OS | Windows 11 x64 (`TargetVersion=Windows10`) | Project |
 | C language mode | MSVC default C mode, C89-compatible source | Project |
 
-The hosted `windows-2025` image contains the **WDK Visual Studio extension**
+The hosted `windows-2022` image contains the **WDK Visual Studio extension**
 (the toolset integration) but not the standalone WDK content. Restoring the
 content from NuGet is Microsoft's documented CI path (and the path used by
 Microsoft's own `Windows-driver-samples` CI). The driver project therefore
 imports the NuGet props from `Directory.Build.props`.
 
-`windows-2022` still carries a full WDK (10.1.26100.4202) and can be used as a
-fallback, but the project standardises on `windows-2025` + NuGet so that the
-content version is explicit and pinned.
+Driver builds deliberately stay on `windows-2022`. The pinned 10.0.26100 WDK
+NuGet package ships MSBuild task assemblies named
+`Microsoft.DriverKit.Build.Tasks.17.0.dll`; the `windows-2025` label now
+resolves to Visual Studio 2026 (18.x), which looks for an `18.0` assembly and
+fails with `MSB4062`. Rust and repository-hygiene jobs do not load WDK tasks and
+run on `windows-2025`. Moving the driver to `windows-2025` requires upgrading
+the WDK/SDK pin to a release that ships 18.0 task assemblies, then re-verifying
+the build.
 
 ### 2.2 Reproducibility gaps
 
-- The `windows-2025` runner label is a moving image. The WDK/SDK content is
-  pinned; **MSVC itself is not**. The CI prints `cl.exe` and `link.exe`
-  versions into the build log. For bit-reproducible releases, use a pinned
-  container image or a self-hosted image and record its digest.
+- The `windows-2022` and `windows-2025` runner labels are moving images. The
+  WDK/SDK content is pinned; **MSVC itself is not**. The CI prints `cl.exe` and
+  `link.exe` versions into the build log. For bit-reproducible releases, use a
+  pinned container image or a self-hosted image and record its digest.
 - NuGet restore is not locked with a hash. The versions are exact, but the
   package source is nuget.org. A future improvement is to vendor the nupkg
   checksums in the repository and verify them after restore.

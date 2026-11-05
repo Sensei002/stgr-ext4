@@ -46,8 +46,9 @@ has `contents: write`. No workflow has access to a signing key.
 
 | Component | Value | Source |
 | --- | --- | --- |
-| Runner | `windows-2025` | GitHub-hosted |
-| Visual Studio | 2022 (17.x) | Runner image |
+| Runner (driver) | `windows-2022` | GitHub-hosted |
+| Runner (hygiene, Rust) | `windows-2025` | GitHub-hosted |
+| Visual Studio (driver) | 2022 (17.x) | `windows-2022` image |
 | MSBuild | via `microsoft/setup-msbuild` | Action |
 | WDK toolset | `WindowsKernelModeDriver10.0` | WDK VS extension in runner image |
 | WDK content | `Microsoft.Windows.WDK.x64` 10.0.26100.6584 | NuGet |
@@ -55,14 +56,17 @@ has `contents: write`. No workflow has access to a signing key.
 | Rust | 1.83.0 | `rust-toolchain.toml` |
 | NuGet | runner-provided `nuget.exe` | Runner image |
 
-The `windows-2025` image supplies the WDK **Visual Studio extension** (the
+The `windows-2022` image supplies the WDK **Visual Studio extension** (the
 platform toolset) but not the standalone WDK content. The project restores the
 content from NuGet, which is Microsoft's documented CI approach. The versions
 are pinned in [`packages.config`](../packages.config), and
 [`Directory.Build.props`](../Directory.Build.props) imports them.
 
-`windows-2022` has a full WDK and can be used as a fallback, but the project
-standardises on `windows-2025` so the content version is explicit.
+Driver builds stay on `windows-2022` because the pinned 10.0.26100 WDK package
+ships `Microsoft.DriverKit.Build.Tasks.17.0.dll`. The `windows-2025` label now
+resolves to Visual Studio 2026 (18.x), whose MSBuild requests the `18.0`
+assembly and fails with `MSB4062`. Hygiene, security, management, and release
+jobs do not load WDK MSBuild tasks and remain on `windows-2025`.
 
 ---
 
@@ -103,7 +107,8 @@ consume a runner.
 
 1. **hygiene** — `windows-2025`, runs
    `.\scripts\Test-Repository.ps1`.
-2. **driver** — calls `driver-build.yml` after hygiene passes.
+2. **driver** — calls `driver-build.yml` after hygiene passes; its build job
+   runs on `windows-2022` so the pinned 26100 WDK task assemblies load.
 3. **management** — calls `management-build.yml` after hygiene passes.
 
 The driver and management jobs run in parallel once hygiene is green.
@@ -283,8 +288,9 @@ claimed.
 
 Other limitations:
 
-- The `windows-2025` label is a moving image. WDK/SDK content is pinned; MSVC
-  is not. Record the compiler version from the log.
+- The `windows-2022` (driver) and `windows-2025` (Rust/hygiene) labels are
+  moving images. WDK/SDK content is pinned; MSVC is not. Record the compiler
+  version from the log.
 - NuGet package hashes are not verified after restore. A future improvement is
   to pin checksums.
 - A green YAML parse is not a green build. Only a run is evidence.
