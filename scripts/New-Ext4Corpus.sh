@@ -70,10 +70,15 @@ create accept-4k-32byte-desc  StgrStatusSuccess 4096 -b 4096 -O ^metadata_csum,^
 create refuse-metadata-csum   StgrStatusChecksumNotVerified 0 -b 4096
 
 #
+# Accepted: bigalloc is in the supported read-only mask, but only when
+# metadata_csum is disabled so the checksum gate does not hide the result.
+#
+create accept-bigalloc        StgrStatusSuccess 4096 -b 4096 -O bigalloc,^metadata_csum -C 65536
+
+#
 # Refused: incompatible or read-only-compatible features outside the supported
 # matrix. metadata_csum is disabled so the feature refusal is the only reason.
 #
-create refuse-bigalloc        StgrStatusUnsupportedFeature 0 -b 4096 -O bigalloc,^metadata_csum -C 65536
 create refuse-inline-data     StgrStatusUnsupportedFeature 0 -b 4096 -O inline_data,^metadata_csum
 create refuse-encrypt         StgrStatusUnsupportedFeature 0 -b 4096 -O encrypt,^metadata_csum
 
@@ -87,7 +92,7 @@ printf '\x00\x00' | dd of="$outdir/refuse-magic.img" bs=1 seek=1080 conv=notrunc
 #
 # Baseline: the images that must parse are also clean according to e2fsck.
 #
-for name in accept-1k accept-2k accept-4k accept-4k-32byte-desc; do
+for name in accept-1k accept-2k accept-4k accept-4k-32byte-desc accept-bigalloc; do
     img="$outdir/$name.img"
     if e2fsck -fn "$img" >/dev/null 2>&1; then
         printf '%s: e2fsck -fn clean\n' "$name" >> "$outdir/baseline.txt"
