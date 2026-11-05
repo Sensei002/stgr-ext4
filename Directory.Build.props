@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Wires the NuGet-restored WDK and Windows SDK content into MSBuild.
+
+  The property names and import order follow Microsoft's own
+  Windows-driver-samples CI build. The WDK package supplies the kernel-mode
+  headers, libraries and build rules; the SDK packages supply the user-mode
+  headers, libraries and the Universal CRT. The Visual Studio installation
+  supplies MSVC and the WindowsKernelModeDriver10.0 platform toolset.
+
+  Do not add a fallback to a locally installed WDK here: a CI build must use
+  exactly the pinned package versions, and a developer build should use the
+  same packages via `nuget restore`.
+-->
+<Project>
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <StgrPackagesDir>$(RepoRoot)packages\</StgrPackagesDir>
+  </PropertyGroup>
+
+  <Import
+    Project="$(StgrPackagesDir)Microsoft.Windows.WDK.x64.10.0.26100.6584\build\native\Microsoft.Windows.WDK.x64.props"
+    Condition="Exists('$(StgrPackagesDir)Microsoft.Windows.WDK.x64.10.0.26100.6584\build\native\Microsoft.Windows.WDK.x64.props') and '$(Platform)' == 'x64'" />
+
+  <Import
+    Project="$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.x64.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.x64.props"
+    Condition="Exists('$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.x64.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.x64.props') and '$(Platform)' == 'x64'" />
+
+  <Import
+    Project="$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.props"
+    Condition="Exists('$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.props')" />
+
+  <Target Name="StgrCheckWdkPackages" BeforeTargets="PrepareForBuild">
+    <Error
+      Condition="'$(Platform)' == 'x64' and !Exists('$(StgrPackagesDir)Microsoft.Windows.WDK.x64.10.0.26100.6584\build\native\Microsoft.Windows.WDK.x64.props')"
+      Text="WDK NuGet packages are missing. Run: nuget restore .\packages.config -PackagesDirectory .\packages\" />
+  </Target>
+</Project>

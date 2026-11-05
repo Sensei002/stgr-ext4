@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7E0B0F6A-2C1D-4A6B-9C3E-5F8D1A2B3C4D}</ProjectGuid>
+    <RootNamespace>STGRExt4</RootNamespace>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <SupportsPackaging>false</SupportsPackaging>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <DriverTargetPlatform>Windows Driver</DriverTargetPlatform>
+    <DriverType>WDM</DriverType>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <TargetName>STGRExt4</TargetName>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <DriverTargetPlatform>Windows Driver</DriverTargetPlatform>
+    <DriverType>WDM</DriverType>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <TargetName>STGRExt4</TargetName>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <!--
+    WDK's kernel-mode props enable test signing for driver projects. This
+    repository deliberately produces an unsigned artifact, so test signing is
+    disabled here and the real signing decision is made outside MSBuild.
+    This property group must stay after Microsoft.Cpp.props, which imports
+    the WDK toolset props.
+  -->
+  <PropertyGroup>
+    <EnableTestSign>false</EnableTestSign>
+    <OutDir>$(MSBuildThisFileDirectory)..\artifacts\driver\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)..\artifacts\obj\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
+            Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
+            Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <ExceptionHandling></ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <Link>
+      <SubSystem>Native</SubSystem>
+    </Link>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <StringPooling>true</StringPooling>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="src\driver.c" />
+    <ClCompile Include="src\dispatch.c" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="include\STGRExt4.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ResourceCompile Include="version.rc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Inf Include="STGRExt4.inf" />
+    <FilesToPackage Include="$(TargetPath)" Condition="'$(ConfigurationType)' == 'Driver'" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

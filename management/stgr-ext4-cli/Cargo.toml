@@ -1,0 +1,11 @@
+[package]
+name = "stgr-ext4"
+description = "Management CLI for the STGR EXT4 native Windows filesystem driver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "stgr-ext4"
+path = "src/main.rs"

@@ -1,0 +1,52 @@
+;;
+;; STGR EXT4 - native Windows EXT4 file system driver
+;;
+;; SPDX-License-Identifier: MIT
+;;
+;; Milestone 1 package definition. This INF installs the driver as a
+;; system-start file system service. It does not install any user-mode
+;; component and it does not assign a drive letter.
+;;
+;; The catalog generated in CI is UNSIGNED unless a real signing step is
+;; configured. An unsigned catalog is not installable on a production
+;; Windows 11 system; see docs/DRIVER-SIGNING.md.
+;;
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 11/05/2026,0.1.0.0
+CatalogFile = STGRExt4.cat
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+[SourceDisksNames]
+1 = %DiskName%,,,
+
+[SourceDisksFiles]
+STGRExt4.sys = 1,,
+
+[DefaultInstall.NTamd64]
+OptionDesc = %ServiceDescription%
+CopyFiles  = @STGRExt4.sys
+
+[DefaultInstall.NTamd64.Services]
+AddService = STGRExt4,0x00000002,STGRExt4_Service
+
+[STGRExt4_Service]
+DisplayName    = %ServiceName%
+Description    = %ServiceDescription%
+ServiceType    = 2
+StartType      = 1
+ErrorControl   = 1
+ServiceBinary  = %12%\STGRExt4.sys
+LoadOrderGroup = "File System"
+
+[Strings]
+ProviderName         = "STEiGER / STGR"
+DiskName             = "STGR EXT4 driver package"
+ServiceName          = "STGR EXT4 filesystem driver"
+ServiceDescription   = "Native EXT4 filesystem driver (development build, unsigned)"

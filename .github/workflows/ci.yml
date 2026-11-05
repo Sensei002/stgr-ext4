@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: Repository hygiene
+    runs-on: windows-2025
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run hygiene checks
+        shell: pwsh
+        run: .\scripts\Test-Repository.ps1
+
+  driver:
+    name: Driver
+    needs: hygiene
+    permissions:
+      contents: read
+    uses: ./.github/workflows/driver-build.yml
+
+  management:
+    name: Management
+    needs: hygiene
+    permissions:
+      contents: read
+    uses: ./.github/workflows/management-build.yml

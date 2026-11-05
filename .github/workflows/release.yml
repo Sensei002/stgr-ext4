@@ -1,0 +1,124 @@
+name: Release
+
+# Creates an UNSIGNED pre-release for a vX.Y.Z tag.
+# It does not sign, install, load, or test the driver.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  driver:
+    name: Driver
+    permissions:
+      contents: read
+    uses: ./.github/workflows/driver-build.yml
+
+  management:
+    name: Management
+    permissions:
+      contents: read
+    uses: ./.github/workflows/management-build.yml
+
+  publish:
+    name: Publish unsigned pre-release
+    needs: [driver, management]
+    runs-on: windows-2025
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify tag matches driver version
+        shell: pwsh
+        run: |
+          $header = Get-Content -LiteralPath 'driver/include/STGRExt4.h' -Raw
+          $major = [regex]::Match($header, '#define\s+STGR_DRIVER_VERSION_MAJOR\s+(\d+)').Groups[1].Value
+          $minor = [regex]::Match($header, '#define\s+STGR_DRIVER_VERSION_MINOR\s+(\d+)').Groups[1].Value
+          $patch = [regex]::Match($header, '#define\s+STGR_DRIVER_VERSION_PATCH\s+(\d+)').Groups[1].Value
+          $expected = "v$major.$minor.$patch"
+          Write-Host "Tag:      $env:GITHUB_REF_NAME"
+          Write-Host "Expected: $expected"
+          if ($env:GITHUB_REF_NAME -ne $expected) {
+              throw "Release tags must be vMAJOR.MINOR.PATCH and match the driver version."
+          }
+
+      - name: Download Release driver package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: stgr-ext4-driver-Release
+          path: dist/driver/Release
+
+      - name: Download Debug driver package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: stgr-ext4-driver-Debug
+          path: dist/driver/Debug
+
+      - name: Download management CLI
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: stgr-ext4-cli
+          path: dist/cli
+
+      - name: Write release notes
+        shell: pwsh
+        run: |
+          $notes = @"
+          STGR EXT4 $env:GITHUB_REF_NAME - UNSIGNED DEVELOPMENT BUILD
+
+          This is a pre-release source and build artifact. It is NOT signed with a
+          Microsoft-trusted production certificate.
+
+          What this build is:
+            * Milestone 1 driver skeleton.
+            * Registers as a file system and refuses every volume.
+            * Does not parse EXT4, mount a volume, read a file, or write a file.
+            * Management CLI: version, help, status only.
+
+          What was NOT done:
+            * No kernel integration test.
+            * No driver load test.
+            * No VM test.
+            * No signature.
+            * No performance or game compatibility test.
+
+          Do not install this on a production machine or a disk with data you care
+          about. See docs/DRIVER-SIGNING.md and docs/DRIVER-INSTALLATION.md.
+          "@
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Set-Content -LiteralPath dist/RELEASE-NOTES.md -Value $notes -Encoding utf8
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $root = (Resolve-Path -LiteralPath 'dist').Path
+          $files = Get-ChildItem -LiteralPath 'dist' -Recurse -File |
+              Where-Object { $_.Name -ne 'SHA256SUMS.txt' }
+
+          $lines = foreach ($file in $files) {
+              $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              $relative = $file.FullName.Substring($root.Length + 1).Replace('\', '/')
+              "$hash  $relative"
+          }
+
+          $lines | Sort-Object | Set-Content -LiteralPath 'dist/SHA256SUMS.txt' -Encoding ascii
+
+      - name: Publish pre-release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $files = @(Get-ChildItem -LiteralPath 'dist' -Recurse -File | ForEach-Object { $_.FullName })
+          gh release create $env:GITHUB_REF_NAME $files `
+              --verify-tag `
+              --prerelease `
+              --title "STGR EXT4 $env:GITHUB_REF_NAME (unsigned)" `
+              --notes-file 'dist/RELEASE-NOTES.md'

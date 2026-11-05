@@ -1,0 +1,67 @@
+name: Driver build
+
+# Reusable driver build. Called by ci.yml and release.yml, and runnable by hand.
+# It produces unsigned development packages only. It does not sign, install,
+# load, or test the driver.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.configuration }} x64
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Restore pinned WDK and SDK packages
+        shell: pwsh
+        run: nuget restore .\packages.config -PackagesDirectory .\packages\
+
+      - name: Record tool versions
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell: $($PSVersionTable.PSVersion)"
+          & msbuild -version -nologo
+          & nuget help | Select-Object -First 1
+
+      - name: Build driver
+        shell: pwsh
+        run: .\scripts\Build-Driver.ps1 -Configuration ${{ matrix.configuration }} -Platform x64
+
+      - name: Generate unsigned catalog
+        shell: pwsh
+        run: .\scripts\Invoke-Inf2Cat.ps1 -PackageDir .\artifacts\package\x64\${{ matrix.configuration }}
+
+      - name: Verify native x64 PE image
+        shell: pwsh
+        run: .\scripts\Test-DriverImage.ps1 -DriverPath .\artifacts\package\x64\${{ matrix.configuration }}\STGRExt4.sys
+
+      - name: Upload driver package (unsigned)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stgr-ext4-driver-${{ matrix.configuration }}
+          path: artifacts/package/x64/${{ matrix.configuration }}/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload symbols
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stgr-ext4-symbols-${{ matrix.configuration }}
+          path: artifacts/driver/x64/${{ matrix.configuration }}/*.pdb
+          if-no-files-found: warn
+          retention-days: 14

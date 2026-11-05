@@ -1,0 +1,55 @@
+name: Management build
+
+# Reusable Rust build. Called by ci.yml and release.yml, and runnable by hand.
+# Runs formatting, Clippy, tests, and a release build of the CLI.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Rust 1.83.0
+    runs-on: windows-2025
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Show Rust toolchain
+        shell: pwsh
+        run: |
+          rustup show
+          rustc --version
+          cargo --version
+
+      - name: Check formatting
+        working-directory: management
+        shell: pwsh
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        working-directory: management
+        shell: pwsh
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run tests
+        working-directory: management
+        shell: pwsh
+        run: cargo test --workspace
+
+      - name: Build release binary
+        working-directory: management
+        shell: pwsh
+        run: cargo build --workspace --release
+
+      - name: Upload CLI
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stgr-ext4-cli
+          path: management/target/release/stgr-ext4.exe
+          if-no-files-found: error
+          retention-days: 14
