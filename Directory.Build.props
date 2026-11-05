@@ -41,11 +41,20 @@
   <PropertyGroup>
     <StgrWdkContentRoot>$(StgrPackagesDir)Microsoft.Windows.WDK.x64.10.0.26100.6584\c</StgrWdkContentRoot>
     <StgrWdkBinRoot>$(StgrWdkContentRoot)\bin\10.0.26100.0</StgrWdkBinRoot>
+    <StgrSdkContentRoot>$(StgrPackagesDir)Microsoft.Windows.SDK.CPP.10.0.26100.6584\c</StgrSdkContentRoot>
+    <StgrSdkBinRoot>$(StgrSdkContentRoot)\bin\10.0.26100.0</StgrSdkBinRoot>
     <WDKContentRoot>$(StgrWdkContentRoot)</WDKContentRoot>
     <WDKBinRoot>$(StgrWdkBinRoot)</WDKBinRoot>
     <WindowsSDKVersionedBinRoot>$(StgrWdkBinRoot)</WindowsSDKVersionedBinRoot>
     <InfToolPath>$(StgrWdkBinRoot)\x64\</InfToolPath>
     <InfToolExe>stampinf.exe</InfToolExe>
+    <!--
+      The resource compiler belongs to the Windows SDK package, while the
+      WDK targets look for it under WDKBinRoot. Point the RC tool at the SDK
+      package so the split NuGet layout resolves.
+    -->
+    <RCToolPath>$(StgrSdkBinRoot)\x64\</RCToolPath>
+    <RCToolArchitecture>Native64Bit</RCToolArchitecture>
   </PropertyGroup>
 
   <Target Name="StgrCheckWdkPackages" BeforeTargets="PrepareForBuild">
