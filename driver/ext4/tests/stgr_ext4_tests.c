@@ -380,7 +380,7 @@ static void TestVolumeState(void)
 static void TestFeaturePolicy(void)
 {
     uint8_t superblock[STGR_EXT4_SUPERBLOCK_SIZE];
-    STGR_SUPERBLOCK decoded;
+
     STGR_FEATURE_SET refusedSet;
     uint32_t refusedBits;
 
