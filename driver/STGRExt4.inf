@@ -19,9 +19,10 @@ ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
 Provider    = %ProviderName%
 DriverVer   = 11/05/2026,0.1.0.0
 CatalogFile = STGRExt4.cat
+PnpLockdown = 1
 
 [DestinationDirs]
-DefaultDestDir = 12
+DefaultDestDir = 13
 
 [SourceDisksNames]
 1 = %DiskName%,,,
@@ -42,7 +43,7 @@ Description    = %ServiceDescription%
 ServiceType    = 2
 StartType      = 1
 ErrorControl   = 1
-ServiceBinary  = %12%\STGRExt4.sys
+ServiceBinary  = %13%\STGRExt4.sys
 LoadOrderGroup = "File System"
 
 [Strings]
