@@ -15,13 +15,20 @@
     Informational only. The host tests build one way; the parameter exists so
     the script matches the other build scripts.
 
+.PARAMETER CorpusDir
+    Directory produced by scripts/New-Ext4Corpus.sh. When supplied, every image
+    hash in manifest.sha256 is verified before the tests run, and the binary is
+    given --corpus so it parses those real mke2fs images.
+
 .EXAMPLE
     .\scripts\Test-Engine.ps1
 #>
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Debug'
+    [string]$Configuration = 'Debug',
+
+    [string]$CorpusDir = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,6 +70,52 @@ if (-not (Test-Path -LiteralPath $vcvars)) {
 
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
+#
+# Verify the corpus before compiling: the point of the manifest is that the
+# Windows tests parse the exact bytes Linux produced, not a different download.
+#
+$corpusPath = ''
+$corpusCount = 0
+if ($CorpusDir) {
+    if (-not (Test-Path -LiteralPath $CorpusDir)) {
+        throw "Corpus directory not found: $CorpusDir"
+    }
+
+    $corpusPath = (Resolve-Path -LiteralPath $CorpusDir).Path
+    $manifest = Join-Path $corpusPath 'manifest.sha256'
+    if (-not (Test-Path -LiteralPath $manifest)) {
+        throw "Corpus manifest not found: $manifest"
+    }
+
+    foreach ($line in Get-Content -LiteralPath $manifest) {
+        if (-not $line.Trim()) {
+            continue
+        }
+
+        $parts = $line.Trim() -split '\s+', 2
+        if ($parts.Count -ne 2) {
+            throw "Malformed manifest line: $line"
+        }
+
+        $expectedHash = $parts[0].ToLowerInvariant()
+        $imagePath = Join-Path $corpusPath $parts[1].TrimStart('*')
+        if (-not (Test-Path -LiteralPath $imagePath)) {
+            throw "Corpus image missing: $imagePath"
+        }
+
+        $actualHash = (Get-FileHash -LiteralPath $imagePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actualHash -ne $expectedHash) {
+            throw "Corpus image hash mismatch: $imagePath"
+        }
+
+        $corpusCount++
+    }
+
+    if ($corpusCount -eq 0) {
+        throw 'Corpus manifest listed no images.'
+    }
+}
+
 $sources = @()
 $sources += Get-ChildItem -LiteralPath $engineDir -Filter '*.c' -File |
     Sort-Object Name |
@@ -88,7 +141,7 @@ $batchLines = @(
         (($sources | ForEach-Object { '"' + $_ + '"' }) -join ' ') +
         ' /Fe:"' + $binary + '"')
     'if errorlevel 1 exit /b 2'
-    ('"' + $binary + '"')
+    (('"' + $binary + '"') + $corpusArgument)
 )
 
 $batchPath = Join-Path $outputDir 'run-engine-tests.cmd'
@@ -98,6 +151,12 @@ Write-Host "Engine host tests"
 Write-Host "  configuration: $Configuration"
 Write-Host "  sources:       $($sources.Count)"
 Write-Host "  output:        $outputDir"
+if ($corpusPath) {
+    Write-Host "  corpus:        $corpusPath ($corpusCount images, hashes verified)"
+}
+else {
+    Write-Host '  corpus:        none; synthetic superblocks only'
+}
 Write-Host ''
 
 & cmd.exe /c $batchPath

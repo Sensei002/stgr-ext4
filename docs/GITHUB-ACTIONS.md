@@ -52,7 +52,9 @@ them with their sources.
 ```text
 ci.yml
   ├── hygiene (Test-Repository.ps1)
-  ├── engine (Test-Engine.ps1: host build of driver/ext4 plus unit tests)
+  ├── corpus (New-Ext4Corpus.sh on ubuntu-latest: mke2fs images + SHA-256)
+  ├── engine (Test-Engine.ps1: host build of driver/ext4, corpus hash check,
+  │           unit tests over synthetic and real superblocks)
   ├── driver  -> driver-build.yml (matrix: Debug, Release)
   └── management -> management-build.yml
 
@@ -140,12 +142,18 @@ consume a runner.
 
 1. **hygiene** — `windows-2025`, runs
    `.\scripts\Test-Repository.ps1`.
-2. **engine** — `windows-2022`, runs `.\scripts\Test-Engine.ps1`. Compiles the
-   freestanding engine and its host tests with MSVC at `/W4 /WX` and runs them.
-   No WDK, no driver install, no VM.
-3. **driver** — calls `driver-build.yml` after hygiene passes; its build job
+2. **corpus** — `ubuntu-latest`, runs `scripts/New-Ext4Corpus.sh`. Builds nine
+   EXT4 images with `mke2fs`, writes `expectations.txt`, `manifest.sha256`,
+   `toolchain.txt` and an `e2fsck -fn` baseline, and uploads them as
+   `stgr-ext4-corpus`. Linux is required because no Windows tool creates EXT4.
+3. **engine** — `windows-2022`, runs `.\scripts\Test-Engine.ps1 -CorpusDir ...`
+   after downloading the corpus. Verifies every image hash, compiles the
+   freestanding engine and its host tests with MSVC at `/W4 /WX`, and runs them
+   over both synthetic superblocks and the real images. No WDK, no driver
+   install, no VM.
+4. **driver** — calls `driver-build.yml` after hygiene passes; its build job
    runs on `windows-2022` so the pinned 26100 WDK task assemblies load.
-4. **management** — calls `management-build.yml` after hygiene passes.
+5. **management** — calls `management-build.yml` after hygiene passes.
 
 The engine, driver, and management jobs run in parallel once hygiene is green.
 
@@ -162,7 +170,10 @@ The engine, driver, and management jobs run in parallel once hygiene is green.
 - the Rust CLI formats, lints, tests, and builds;
 - the engine parses and validates a superblock on the host, and refuses bad
   magic, bad geometry, bad sizes, unclean volumes, and refused features with
-  the exact status each test asserts.
+  the exact status each test asserts;
+- the corpus images are byte-identical to what Linux generated (every SHA-256
+  is checked with `Get-FileHash` before the parse), and the engine accepts or
+  refuses each one for the expected reason.
 
 ### What it does not prove
 
@@ -306,6 +317,7 @@ production artifact. The release notes say so.
 | `stgr-ext4-symbols-Debug` | PDB, if produced | 14 days |
 | `stgr-ext4-symbols-Release` | PDB, if produced | 14 days |
 | `stgr-ext4-cli` | `stgr-ext4.exe` | 14 days |
+| `stgr-ext4-corpus` | Nine EXT4 images, `expectations.txt`, SHA-256 manifest, toolchain record, `e2fsck` baseline | 14 days |
 | Release assets | all of the above plus notes and SHA-256 | release lifetime |
 
 Artifacts from a workflow run are not a release. They expire. A release is a

@@ -67,6 +67,13 @@ therefore not made.
     instead of trusted: CRC-32C is deliberately not implemented yet.
   - Host unit tests (71 checks) and `scripts/Test-Engine.ps1`, wired into a new
     `Engine host tests` CI job.
+- EXT4 image corpus:
+  - `scripts/New-Ext4Corpus.sh` creates nine `mke2fs` images on Linux: accepted
+    block sizes 1 KiB, 2 KiB and 4 KiB, a 32-byte-descriptor volume, and
+    `metadata_csum`, `bigalloc`, `inline_data`, `encrypt` and bad-magic cases.
+  - The corpus job publishes the images with a SHA-256 manifest, the exact
+    `mke2fs` command lines and an `e2fsck -fn` baseline; the engine job verifies
+    every hash and parses each image, asserting status and block size.
 
 ### Changed
 

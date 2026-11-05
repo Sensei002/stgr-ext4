@@ -551,7 +551,220 @@ static void TestScalarHelpers(void)
     ExpectInt("add overflows", 0, StgrAddU64(0xFFFFFFFFFFFFFFFFu, 1u, &result));
 }
 
-int main(void)
+//
+// Corpus mode: parse the superblock of every image that
+// scripts/New-Ext4Corpus.sh produced on Linux. Test-Engine.ps1 verifies
+// manifest.sha256 before this runs, so a pass means these exact mke2fs bytes
+// were parsed, not a different download.
+//
+#define CORPUS_MAX_IMAGE_BYTES (32u * 1024u * 1024u)
+
+static uint8_t g_corpusImage[CORPUS_MAX_IMAGE_BYTES];
+
+typedef struct _STATUS_NAME
+{
+    const char *Name;
+    STGR_STATUS Status;
+} STATUS_NAME;
+
+static const STATUS_NAME g_statusNames[] =
+{
+    { "StgrStatusSuccess", StgrStatusSuccess },
+    { "StgrStatusIoError", StgrStatusIoError },
+    { "StgrStatusBadMagic", StgrStatusBadMagic },
+    { "StgrStatusBadBlockSize", StgrStatusBadBlockSize },
+    { "StgrStatusBadGeometry", StgrStatusBadGeometry },
+    { "StgrStatusBadInodeSize", StgrStatusBadInodeSize },
+    { "StgrStatusBadDescriptorSize", StgrStatusBadDescriptorSize },
+    { "StgrStatusUncleanVolume", StgrStatusUncleanVolume },
+    { "StgrStatusUnsupportedFeature", StgrStatusUnsupportedFeature },
+    { "StgrStatusChecksumNotVerified", StgrStatusChecksumNotVerified }
+};
+
+static int LookupStatus(const char *Name, STGR_STATUS *Status)
+{
+    size_t index;
+
+    for (index = 0u; index < sizeof(g_statusNames) / sizeof(g_statusNames[0]); index++)
+    {
+        if (strcmp(Name, g_statusNames[index].Name) == 0)
+        {
+            *Status = g_statusNames[index].Status;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static int NextToken(const char **Cursor, char *Buffer, size_t BufferLength)
+{
+    const char *cursor = *Cursor;
+    size_t length = 0u;
+
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n')
+    {
+        cursor++;
+    }
+
+    if (*cursor == '\0')
+    {
+        Buffer[0] = '\0';
+        return 0;
+    }
+
+    while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t' &&
+           *cursor != '\r' && *cursor != '\n')
+    {
+        if (length + 1u < BufferLength)
+        {
+            Buffer[length] = *cursor;
+            length++;
+        }
+
+        cursor++;
+    }
+
+    Buffer[length] = '\0';
+    *Cursor = cursor;
+    return 1;
+}
+
+static unsigned long ParseDecimal(const char *Text)
+{
+    unsigned long value = 0ul;
+
+    while (*Text >= '0' && *Text <= '9')
+    {
+        value = (value * 10ul) + (unsigned long)(*Text - '0');
+        Text++;
+    }
+
+    return value;
+}
+
+static void TestCorpus(const char *Directory)
+{
+    char path[1024];
+    char line[256];
+    FILE *file;
+    int images = 0;
+    int accepted = 0;
+
+    (void)snprintf(path, sizeof(path), "%s/expectations.txt", Directory);
+    file = fopen(path, "r");
+    if (file == NULL)
+    {
+        ExpectTrue("corpus expectations file opened", 0);
+        return;
+    }
+
+    while (fgets(line, (int)sizeof(line), file) != NULL)
+    {
+        char name[128];
+        char statusText[64];
+        char sizeText[32];
+        char label[192];
+        const char *cursor = line;
+        STGR_STATUS expected = StgrStatusSuccess;
+        STGR_STATUS actual;
+        STGR_SUPERBLOCK decoded;
+        TEST_DEVICE device;
+        STGR_BLOCK_IO io;
+        FILE *image;
+        long imageBytes;
+
+        name[0] = '\0';
+        statusText[0] = '\0';
+        sizeText[0] = '\0';
+
+        if (NextToken(&cursor, name, sizeof(name)) == 0)
+        {
+            continue;
+        }
+
+        if (NextToken(&cursor, statusText, sizeof(statusText)) == 0 ||
+            NextToken(&cursor, sizeText, sizeof(sizeText)) == 0)
+        {
+            ExpectTrue("corpus expectation line is well formed", 0);
+            (void)fclose(file);
+            return;
+        }
+
+        if (LookupStatus(statusText, &expected) == 0)
+        {
+            ExpectTrue("corpus expectation status name is known", 0);
+            (void)fclose(file);
+            return;
+        }
+
+        (void)snprintf(path, sizeof(path), "%s/%s.img", Directory, name);
+        image = fopen(path, "rb");
+        if (image == NULL)
+        {
+            ExpectTrue("corpus image opened", 0);
+            (void)fclose(file);
+            return;
+        }
+
+        if (fseek(image, 0, SEEK_END) != 0)
+        {
+            (void)fclose(image);
+            ExpectTrue("corpus image is seekable", 0);
+            (void)fclose(file);
+            return;
+        }
+
+        imageBytes = ftell(image);
+        (void)fseek(image, 0, SEEK_SET);
+
+        if (imageBytes <= 0 || (uint64_t)imageBytes > (uint64_t)sizeof(g_corpusImage))
+        {
+            (void)fclose(image);
+            ExpectTrue("corpus image fits the test buffer", 0);
+            (void)fclose(file);
+            return;
+        }
+
+        if (fread(g_corpusImage, 1u, (size_t)imageBytes, image) != (size_t)imageBytes)
+        {
+            (void)fclose(image);
+            ExpectTrue("corpus image fully read", 0);
+            (void)fclose(file);
+            return;
+        }
+
+        (void)fclose(image);
+
+        device.Image = g_corpusImage;
+        device.ImageBytes = (uint32_t)imageBytes;
+        device.ShortRead = 0;
+        io.Context = &device;
+        io.SizeBytes = (uint64_t)imageBytes;
+        io.Read = TestRead;
+
+        actual = StgrExt4ReadSuperblock(&io, NULL, &decoded);
+
+        (void)snprintf(label, sizeof(label), "corpus %s", name);
+        ExpectStatus(label, expected, actual);
+        images++;
+
+        if (expected == StgrStatusSuccess)
+        {
+            accepted++;
+            (void)snprintf(label, sizeof(label), "corpus %s block size", name);
+            ExpectInt(label, (long)ParseDecimal(sizeText), (long)decoded.BlockSize);
+        }
+    }
+
+    (void)fclose(file);
+
+    ExpectTrue("corpus listed at least one image", images > 0);
+    ExpectTrue("corpus exercised an accepted image", accepted > 0);
+    printf("corpus: %d images parsed, %d accepted\n", images, accepted);
+}
+
+int main(int argc, char **argv)
 {
     TestValidSuperblock();
     TestSignatureAndBlockSize();
@@ -564,6 +777,16 @@ int main(void)
     TestReadPath();
     TestApiEdges();
     TestScalarHelpers();
+
+    if (argc == 3 && strcmp(argv[1], "--corpus") == 0)
+    {
+        TestCorpus(argv[2]);
+    }
+    else if (argc != 1)
+    {
+        printf("usage: %s [--corpus <directory>]\n", argv[0]);
+        return 2;
+    }
 
     printf("%d checks, %d failure(s)\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

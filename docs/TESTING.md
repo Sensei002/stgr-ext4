@@ -144,29 +144,30 @@ A unit test must assert exact values and status codes. A test that only checks
 
 ### Corpus generation (Linux)
 
-A future CI job or lab script creates images with a pinned `e2fsprogs`:
+`scripts/New-Ext4Corpus.sh` runs in the `EXT4 image corpus` CI job on
+`ubuntu-latest` with `e2fsprogs` from apt. It creates:
 
-```bash
-mke2fs -t ext4 -b 4096 -O extents,64bit,flex_bg,dir_index,filetype,sparse_super,large_file,metadata_csum ...
-mke2fs -t ext4 -b 1024 ...
-mke2fs -t ext4 -O ^metadata_csum ...
-mke2fs -t ext4 -O bigalloc ...
-mke2fs -t ext4 -O inline_data ...
-mke2fs -t ext4 -O encrypt ...
-```
+| Image | Expected result |
+| --- | --- |
+| `accept-1k`, `accept-2k`, `accept-4k` | accepted; block size 1024, 2048, 4096 |
+| `accept-4k-32byte-desc` | accepted; `^64bit`, so descriptors are 32 bytes |
+| `refuse-metadata-csum` | `StgrStatusChecksumNotVerified` |
+| `refuse-bigalloc`, `refuse-inline-data`, `refuse-encrypt` | `StgrStatusUnsupportedFeature` |
+| `refuse-magic` | `StgrStatusBadMagic` |
 
-Then:
+The job writes `expectations.txt` (name, expected status, expected block size),
+`manifest.sha256`, `toolchain.txt` (the `mke2fs` version and every command
+line) and `baseline.txt` (`e2fsck -fn` on the images that must be accepted).
+The Windows `Engine host tests` job downloads the artifact, verifies every
+SHA-256 with `Get-FileHash`, and only then runs the test binary with `--corpus`.
 
-- populate trees with `debugfs` or a loop mount;
-- create sparse files, symlinks, hard links, xattrs, long names, non-ASCII
-  names;
-- dirty the journal with `debugfs` or an interrupted write;
-- mutate bytes at every structure boundary;
-- truncate at every 512-byte boundary;
-- run `e2fsck -fn` on the unmutated originals to establish a baseline.
+Images are **not committed**. `e2fsprogs` is recorded, not pinned: the apt
+version is whatever the runner image carries, and `toolchain.txt` is the record
+of it.
 
-Images are **not committed**. They are artifacts with recorded hashes. The
-`e2fsprogs` version, command line, and hash go in a manifest.
+Still to build: populated trees via `debugfs`, dirty journals, byte mutations
+at every structure boundary, truncation at every 512-byte boundary, and the
+fuzzers.
 
 ### Fuzzing
 
@@ -345,7 +346,7 @@ tested, and no benchmark has been run.
 | Clippy/tests | Yes | Yes |
 | Engine unit tests | Yes | Yes |
 | Fuzzing | Short run (future) | Long run |
-| Corrupt corpus | Yes (future) | Yes |
+| Corrupt corpus | Yes (generated and parsed in CI) | Yes |
 | Driver load/unload | **No** | Yes |
 | Mount/read | **No** | Yes |
 | Journal/replay | **No** | Yes |
@@ -394,7 +395,7 @@ substitute for a hash comparison and `e2fsck -fn`.
 | PE check | Green in CI runs 7 and 8 |
 | CLI fmt/clippy/test | Green in CI runs 7 and 8 |
 | Engine unit tests | Green in CI run 8: 71 checks, 0 failures, synthetic images only |
-| Corrupt corpus | Does not exist |
+| Corrupt corpus | Nine `mke2fs` images generated in CI; hashes verified before parsing |
 | Fuzzing | Never run |
 | Driver load/unload | Never run |
 | Mount/read | Impossible (not implemented) |

@@ -26,3 +26,6 @@
 *.sys          binary
 *.cat          binary
 *.pfx          binary
+
+# Shell scripts run on Linux CI; a CRLF checkout would not execute.
+*.sh text eol=lf

@@ -25,20 +25,52 @@ jobs:
         shell: pwsh
         run: .\scripts\Test-Repository.ps1
 
+  corpus:
+    name: EXT4 image corpus
+    needs: hygiene
+    # Linux only, because the corpus is produced by e2fsprogs's mke2fs. The
+    # images and their SHA-256 manifest are artifacts; they are never committed.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install e2fsprogs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends e2fsprogs
+
+      - name: Generate corpus
+        run: ./scripts/New-Ext4Corpus.sh artifacts/corpus
+
+      - name: Upload corpus
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stgr-ext4-corpus
+          path: artifacts/corpus
+          retention-days: 14
+          if-no-files-found: error
+
   engine:
     name: Engine host tests
-    needs: hygiene
+    needs: [hygiene, corpus]
     # Host-only build of the freestanding engine: no WDK, no driver load, no
-    # VM. It compiles driver/ext4 at /W4 /WX and runs the unit tests, which is
-    # the layer that catches parser bugs.
+    # VM. It compiles driver/ext4 at /W4 /WX, verifies the corpus hashes, and
+    # runs the unit tests, which is the layer that catches parser bugs.
     runs-on: windows-2022
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Download corpus
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: stgr-ext4-corpus
+          path: artifacts/corpus
+
       - name: Compile and run engine host tests
         shell: pwsh
-        run: .\scripts\Test-Engine.ps1 -Configuration Release
+        run: .\scripts\Test-Engine.ps1 -Configuration Release -CorpusDir .\artifacts\corpus
 
   driver:
     name: Driver
