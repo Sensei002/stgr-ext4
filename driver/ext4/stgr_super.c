@@ -430,7 +430,7 @@ StgrExt4ParseSuperblock(
     //
     if ((roCompatFeatures & STGR_FEATURE_RO_COMPAT_METADATA_CSUM) != 0u)
     {
-        if (Buffer[STGR_SB_OFF_CHECKSUM_TYPE] != 1u)
+        if (Buffer[STGR_SB_OFF_CHECKSUM_TYPE] != (uint8_t)1)
         {
             return StgrStatusUnsupportedFeature;
         }

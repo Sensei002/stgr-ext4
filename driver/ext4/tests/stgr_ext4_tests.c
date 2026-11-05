@@ -196,7 +196,7 @@ static void TestValidSuperblock(void)
     ExpectInt("descriptor size decoded", 64, (long)decoded.DescriptorSize);
     ExpectInt("revision decoded", 1, (long)decoded.RevisionLevel);
     ExpectInt("first data block decoded", 0, (long)decoded.FirstDataBlock);
-    ExpectTrue("uuid copied", decoded.Uuid[0] == 0x11u && decoded.Uuid[15] == 0x00u);
+    ExpectTrue("uuid copied", decoded.Uuid[0] == 0x11 && decoded.Uuid[15] == 0x00);
     ExpectTrue("label copied and terminated",
                strcmp(decoded.VolumeLabel, "STGRTEST") == 0 &&
                decoded.VolumeLabel[16] == '\0');
